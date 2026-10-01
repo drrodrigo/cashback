@@ -9,11 +9,15 @@ O desenho completo (contas, regras, limite jurídico, modelo de receita) está e
 
 ## O estado hoje (14/09/2026)
 
-**Modo demonstração: guarda no navegador, não fala com servidor nenhum.** É o mesmo
-arranjo do Banco da Hora e da Rede de Parceiros quando nasceram, e é escolha, não
-pendência: produto novo não entra no banco do Catálogo nem para adiantar. O schema
-está escrito e versionado em `supabase/migrations/`, **sem ter sido aplicado em banco
-nenhum**, esperando a decisão do projeto Supabase próprio (US$ 10/mês).
+**Modo demonstração: guarda no navegador, não fala com servidor nenhum.** O schema
+está escrito, **plantado e provado num Postgres descartável**, e **não aplicado em banco
+nenhum** — esperando uma palavra do dono, não uma mensalidade.
+
+> **Correção de 01/10, e ela vale dinheiro.** Este arquivo dizia que o cash esperava "a
+> decisão do projeto Supabase próprio (US$ 10/mês)". Isso envelheceu no dia seguinte ao
+> que foi escrito: em 13/09 o dono juntou tudo num banco só, com uma **gaveta (schema)
+> por produto**. O cash não precisa de projeto novo nem de mensalidade nova — precisa de
+> UMA migration aplicada no banco único, e ela custa R$ 0,00.
 
 O que já existe de verdade:
 
@@ -49,7 +53,15 @@ que a quebre.
 npm run test:cash        # da raiz do repositório: 29 testes do motor
 npx vite build cash      # da raiz: gera cash/dist
 npx vite cash            # da raiz: abre em desenvolvimento
+
+# planta a gaveta num Postgres descartável e mede as regras dela:
+bash bipechat/scripts/banco-de-mentira.sh --raiz cash --testes
 ```
+
+O último é o que prova a migration antes de ela encostar no banco de verdade. São 12
+medidas, e nenhuma delas se faz lendo o arquivo: `revoke` escrito não prova porta
+fechada (são **duas** portas, `public` e `anon`), e grant que falta não dá erro — dá
+silêncio, dias depois, numa Edge Function que parou de ler.
 
 Os comandos saem da raiz porque `npm install` dentro de pasta aninhada quebra neste
 ambiente, com um erro do próprio npm (`Cannot read properties of null (reading
@@ -67,7 +79,10 @@ cash ganhar repositório próprio, `npm install && npm test` funciona sem mudar 
 
 ## Quando virar produto de verdade
 
-1. Projeto Supabase próprio, migração aplicada primeiro numa branch do Supabase.
+1. A migration aplicada no banco único (gaveta `cash`) — **falta só a palavra do dono**.
+   Já está provada no Postgres de mentira, inclusive falsificada: abrindo a gaveta para o
+   `anon` e desligando a RLS de uma tabela, o teste fica vermelho apontando qual regra
+   caiu.
 2. Projeto Vercel próprio, com diretório raiz `cash/` (o `vercel.json` daqui já está
    pronto), ramos `main` e `beta`.
 3. Domínio próprio, e o nome definitivo da moeda — "cash" foi a escolha do Rodrigo em
