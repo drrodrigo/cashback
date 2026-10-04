@@ -1,54 +1,118 @@
 -- ---------------------------------------------------------------------------
 -- Cash -- A FRONTEIRA. A camada curta de funções em `public`.
 --
--- A gaveta `cash` é fechada: nem `anon` nem `authenticated` têm `usage` nela.
--- Então NADA de tela toca tabela do cash. Quem serve a tela é esta lista curta,
--- e ela é a fronteira de verdade: no dia de separar o produto, é ela que vira
--- chamada de API, e nenhuma tela precisa saber.
+-- 🔴 ESTE ARQUIVO FOI REESCRITO EM 04/10, ANTES DE SER APLICADO, e o motivo é a
+-- lição mais cara deste repositório: EU IA CONSTRUIR O QUE JÁ EXISTE.
 --
--- 🔴 A DECISÃO DE SEGURANÇA QUE ESTE ARQUIVO TOMA, e ela é a mais importante:
+-- A primeira versão inventava o cliente do cashback do zero: cadastro por
+-- telefone, login por SMS (que custa por mensagem), carteira nova. Então o dono
+-- disse de onde o cliente vem: *"no caso seria o usuário do Clube Prime. Lá
+-- dentro do Clube Prime a gente vai criar um acesso ao cashback"* -- e depois
+-- *"esse pessoal vai ser a nossa base, o pessoal que já vai estar podendo
+-- habilitar o cashback"*.
 --
---     QUEM ENTRA COMO CLIENTE ENTRA PELO TELEFONE, e o telefone vem do LOGIN,
---     nunca de um campo digitado.
+-- Medido na produção antes de escrever uma linha (04/10):
 --
--- A tentação é `cash_entrar(telefone)`: a pessoa digita o número e pronto.
--- Isso é a CONTA FANTASMA do BipeChat outra vez, com outro nome -- lá a
--- migration 0001 deixava quem tivesse a chave digitar um telefone qualquer e
--- criar a conta daquela pessoa. Aqui seria pior, porque do outro lado do número
--- tem saldo: qualquer um logado reivindicaria a carteira de qualquer um.
+-- | o que eu ia construir      | o que JÁ EXISTE no schema `clube`              |
+-- |----------------------------|------------------------------------------------|
+-- | cadastro de cliente        | `clube.perfis` -- **3.903 pessoas**, todas com login no `auth.users` |
+-- | login por telefone com SMS | o login do Clube, que essas 3.903 já têm       |
+-- | achar o cliente no balcão  | `clube.ler_carteirinha(parceiro, token)` -- QR com token de 90s, uso único |
+-- | loja parceira              | `clube.parceiros` -- **42**, com `comissao_percentual` |
+-- | o resgate como dado        | `clube.validacoes` -- já tem `valor_compra_centavos` e `economia_centavos` |
 --
--- Então `public.cash_entrar()` não recebe telefone nenhum. Ela LÊ o telefone de
--- dentro do próprio login (`auth.jwt() ->> 'phone'`), que só existe se a pessoa
--- provou o número recebendo um código. Quem entrou por e-mail não vira cliente
--- do cash -- recebe `precisa_entrar_por_telefone` e a tela explica.
+-- É o caso de 16/09 e de 01/10 pela terceira vez: *"não existe" era "existe e
+-- ninguém acha"*. A diferença é que desta vez a medição veio antes da entrega --
+-- e o que ela economizou não foi uma tela, foi **o custo de SMS por login** e um
+-- cadastro paralelo de 3.903 pessoas que já estão cadastradas.
 --
--- Consequência prática, e é decisão do dono: o login do cliente no cash é por
--- TELEFONE COM CÓDIGO (SMS). Isso tem custo por mensagem. A alternativa segura
--- não existe: vincular carteira a número digitado é entregar saldo de terceiro.
+-- 🔴 E ELA CONSERTOU UM RISCO, NÃO SÓ POUPOU TRABALHO. A versão anterior lia o
+-- telefone do login (`auth.jwt() ->> 'phone'`) para não deixar ninguém digitar o
+-- número de outra pessoa e levar o saldo dela -- a conta fantasma do BipeChat.
+-- A carteirinha é melhor que isso em dois aspectos: o token PROVA que a pessoa
+-- está no balcão com o aplicativo na mão (90 segundos, uso único), e quem valida
+-- tem que ser o dono ATIVO do parceiro. Não há campo nenhum onde digitar o
+-- identificador de um terceiro.
 --
--- O LOJISTA, ao contrário, não precisa de login novo: ele já tem o do Catálogo.
--- `cash.lojas.catalogo_loja_id` aponta para a loja dele (coluna uuid solta, sem
--- `references`, pela regra 2 da gaveta), e a fronteira resolve
--- `auth.uid()` -> `public.lojas.owner_id` -> `cash.lojas` NA HORA, a cada
--- chamada. Guardar o dono copiado aqui seria mais "separado" e estaria ERRADO:
--- loja que troca de dono no Catálogo deixaria o dono antigo operando o balcão.
--- Esta é a única leitura que o cash faz no vizinho, e é no lugar certo -- dentro
--- da fronteira, que é justamente o que vira API no dia de separar.
+-- O LOJISTA entra de dois jeitos, porque o cash serve aos dois mundos dele:
+-- `clube.parceiros.dono_id = auth.uid()` (os 42 parceiros do Clube) ou
+-- `public.lojas.owner_id = auth.uid()` (as lojas do Catálogo). A fronteira
+-- resolve NA HORA, a cada chamada: guardar o dono copiado aqui deixaria quem
+-- vendeu a loja operando o balcão dela.
+--
+-- A gaveta `cash` continua fechada: nem `anon` nem `authenticated` têm `usage`
+-- nela. Esta lista curta é a fronteira de verdade -- no dia de separar o produto,
+-- é ela que vira chamada de API.
+--
+-- ⚠️ O QUE ESTE ARQUIVO NÃO FAZ, DE PROPÓSITO: não escreve em `clube.validacoes`.
+-- O Clube é outro produto, e preencher o `valor_compra_centavos` dele daqui
+-- mudaria o relatório dele sem ninguém ter pedido. O cash guarda o seu próprio
+-- elo (`cash.lancamentos.clube_validacao_id`) e deixa a pergunta registrada: o
+-- cashback deve também completar a ficha de validação do Clube, para os
+-- relatórios de lá continuarem inteiros? É decisão dele.
 -- ---------------------------------------------------------------------------
 
 -- --- o que faltava de tabela ---------------------------------------------------
 
--- O elo com o login. `uuid` solto, sem `references auth.users`: a regra 2 vale
--- para `auth` como vale para `public` -- rebite atravessando schema é o que torna
--- `pg_dump --schema=cash` impossível.
-alter table cash.clientes add column if not exists auth_user_id uuid;
-create unique index if not exists clientes_auth_idx on cash.clientes (auth_user_id)
-  where auth_user_id is not null;
+-- O ELO COM O CLUBE. `uuid` solto, sem `references clube.perfis`: a regra 2 vale
+-- para o vizinho como vale para `public` -- rebite atravessando schema é o que
+-- torna `pg_dump --schema=cash` impossível no dia de separar.
+alter table cash.clientes add column if not exists clube_membro_id uuid;
+create unique index if not exists clientes_clube_idx on cash.clientes (clube_membro_id)
+  where clube_membro_id is not null;
+
+-- O TELEFONE DEIXA DE SER A CHAVE. Ele era `not null unique` porque era a
+-- identidade; agora a identidade é o membro do Clube, e o telefone é só cópia
+-- denormalizada (regra 3) para o balcão conferir com quem está falando. Dos
+-- 3.903 membros, 6 não têm telefone -- com `not null` eles não entrariam.
+alter table cash.clientes alter column telefone drop not null;
+alter table cash.clientes drop constraint if exists clientes_telefone_key;
+create unique index if not exists clientes_telefone_idx on cash.clientes (telefone)
+  where telefone is not null and telefone <> '';
+
+-- E QUEM LÊ O TELEFONE TEM QUE SABER DISSO. `on conflict (telefone)` não acha um
+-- índice PARCIAL sozinho -- ele precisa do mesmo `where` para inferir o índice.
+-- Trocar a restrição e não atualizar quem a usa é a lição de 12/09 (a coluna
+-- criada sem atualizar o `minha_loja`), e aqui o plantio reprovou na hora: "there
+-- is no unique or exclusion constraint matching the ON CONFLICT specification".
+-- Trocar a chave e consertar quem a lê são a MESMA mudança, não duas.
+create or replace function cash.achar_ou_criar_cliente(p_telefone text, p_nome text default '')
+returns uuid
+language plpgsql as $$
+declare
+  v_id uuid;
+  v_tel text := regexp_replace(coalesce(p_telefone, ''), '[^0-9]', '', 'g');
+begin
+  if length(v_tel) < 10 then
+    raise exception 'telefone_invalido' using hint = 'Telefone precisa ter DDD e número.';
+  end if;
+
+  insert into cash.clientes (telefone, nome) values (v_tel, coalesce(p_nome, ''))
+  on conflict (telefone) where telefone is not null and telefone <> ''
+  do update
+    -- DUPLICAR FAZ BARULHO, SUBSTITUIR NÃO: o `do update` só preenche o nome
+    -- quando ele está vazio, nunca por cima do que já existe.
+    set nome = case when cash.clientes.nome = '' then excluded.nome else cash.clientes.nome end
+  returning id into v_id;
+
+  return v_id;
+end $$;
+
+-- O ELO COM O PARCEIRO DO CLUBE, pelo mesmo motivo e com a mesma forma.
+alter table cash.lojas add column if not exists clube_parceiro_id uuid;
+create unique index if not exists lojas_clube_idx on cash.lojas (clube_parceiro_id)
+  where clube_parceiro_id is not null;
 
 -- Uma loja do Catálogo não pode virar duas lojas no cash: seria crédito em dois
 -- lugares e balcão escolhendo qual.
 create unique index if not exists lojas_catalogo_unico_idx on cash.lojas (catalogo_loja_id)
   where catalogo_loja_id is not null;
+
+-- O elo com a leitura da carteirinha que originou o cashback. É o que deixa
+-- responder "de onde veio este crédito" sem ler nada do Clube.
+alter table cash.lancamentos add column if not exists clube_validacao_id uuid;
+create index if not exists lancamentos_validacao_idx on cash.lancamentos (clube_validacao_id)
+  where clube_validacao_id is not null;
 
 -- O PEDIDO de saque, e por que ele existe em vez de o lojista sacar sozinho.
 --
@@ -57,9 +121,6 @@ create unique index if not exists lojas_catalogo_unico_idx on cash.lojas (catalo
 -- pela tela, o livro diria "saiu 950" num instante em que ninguém transferiu
 -- nada: o livro passaria a mentir sobre dinheiro de verdade, que é o único erro
 -- deste produto que não tem conserto barato.
---
--- Então o lojista PEDE, e quem executa é quem paga. É meia porta ao contrário:
--- em vez de um botão que promete, um pedido que alguém cumpre.
 create table if not exists cash.saques_pedidos (
   id uuid primary key default gen_random_uuid(),
   loja_id uuid not null references cash.lojas(id) on delete cascade,
@@ -78,22 +139,46 @@ grant all privileges on cash.saques_pedidos to service_role;
 
 -- --- quem é quem (dentro da gaveta, inalcançável pela tela) ---------------------
 
--- A loja do usuário logado. Devolve nulo quando ele não é lojista de loja no
--- cash -- e a fronteira trata o nulo, nunca devolve dado de outra loja.
 create or replace function cash.loja_do_usuario() returns uuid
 language sql stable as $$
-  select cl.id
-    from cash.lojas cl
+  select cl.id from cash.lojas cl
+    join clube.parceiros cp on cp.id = cl.clube_parceiro_id
+   where cp.dono_id = auth.uid() and cp.ativo and cl.ativa
+  union all
+  select cl.id from cash.lojas cl
     join public.lojas pl on pl.id = cl.catalogo_loja_id
-   where pl.owner_id = auth.uid()
-     and cl.ativa
-   limit 1;
+   where pl.owner_id = auth.uid() and cl.ativa
+  limit 1;
 $$;
 
 create or replace function cash.cliente_do_usuario() returns uuid
 language sql stable as $$
-  select id from cash.clientes where auth_user_id = auth.uid();
+  select id from cash.clientes where clube_membro_id = auth.uid();
 $$;
+
+-- Acha ou cria o cliente do cash a partir do membro do Clube, COPIANDO nome e
+-- telefone (regra 3: o dado de referência se copia, não se lê do vizinho -- assim
+-- a gaveta sai inteira no dia de separar).
+create or replace function cash.cliente_do_membro(p_membro uuid) returns uuid
+language plpgsql as $$
+declare
+  v_id uuid;
+  v_nome text;
+  v_tel text;
+begin
+  select id into v_id from cash.clientes where clube_membro_id = p_membro;
+  if v_id is not null then return v_id; end if;
+
+  select nome, nullif(regexp_replace(coalesce(telefone,''), '[^0-9]', '', 'g'), '')
+    into v_nome, v_tel
+    from clube.perfis where id = p_membro;
+  if not found then raise exception 'nao_e_do_clube'; end if;
+
+  insert into cash.clientes (clube_membro_id, nome, telefone)
+  values (p_membro, coalesce(v_nome, ''), v_tel)
+  returning id into v_id;
+  return v_id;
+end $$;
 
 -- --- a fronteira do LOJISTA (o balcão) -----------------------------------------
 
@@ -115,44 +200,75 @@ begin
       from cash.lojas l where l.id = v_loja;
 end $$;
 
--- O balcão acha o cliente pelo telefone que ele acabou de dizer, e cria se não
--- existir. Cadastro que obriga o cliente a parar e preencher formulário no caixa
--- não acontece -- é o "dita seu CPF" do supermercado.
+-- 🔴 A PORTA DO BALCÃO: LER A CARTEIRINHA. Não existe campo para digitar quem é o
+-- cliente, e isso não é economia de tela -- é o que impede o vendedor (ou
+-- qualquer um com a tela aberta) de creditar ou debitar a conta de um terceiro.
+-- O token prova que a pessoa está ali com o aplicativo na mão: 32 caracteres hex,
+-- 90 segundos, uso único, e o parceiro tem que ser o dono ATIVO.
 --
--- O QUE ELA DEVOLVE É DE PROPÓSITO CURTO: o nome e quanto dá para usar AQUI.
--- Não devolve extrato, não devolve saldo de outra loja, não devolve onde a
--- pessoa comprou. A Loja A vê os resgates DELA; o que o cliente gastou na Loja B
--- não é dela nunca.
-create or replace function public.cash_balcao_cliente(p_telefone text, p_nome text default '')
-returns table(cliente_id uuid, nome text, pode_usar_aqui numeric, acumulado numeric)
+-- Repare que ela DELEGA ao Clube (`clube.ler_carteirinha`) em vez de copiar as
+-- quatro recusas dele. Copiar regra de autorização é garantir que uma das cópias
+-- fique velha -- e a que fica velha é sempre a que ninguém lembra que existe.
+create or replace function public.cash_balcao_ler_carteirinha(p_token text)
+returns table(cliente_id uuid, nome text, pode_usar_aqui numeric, acumulado numeric,
+              validacao_id uuid, nivel text)
 language plpgsql security definer
 set search_path to 'cash', 'public', 'pg_temp'
 as $$
 declare
   v_loja uuid := cash.loja_do_usuario();
+  v_parceiro uuid;
+  v_leitura record;
+  v_membro uuid;
   v_cli uuid;
 begin
   if v_loja is null then raise exception 'nao_e_lojista'; end if;
-  v_cli := cash.achar_ou_criar_cliente(p_telefone, p_nome);
+
+  select l.clube_parceiro_id into v_parceiro from cash.lojas l where l.id = v_loja;
+  if v_parceiro is null then
+    raise exception 'loja_sem_carteirinha'
+      using hint = 'Esta loja do cash não está ligada a um parceiro do Clube.';
+  end if;
+
+  -- Quem autoriza é o Clube. Se o token venceu, já foi usado, não é QR de
+  -- carteirinha, ou quem está lendo não é o dono ativo, ele levanta o erro dele.
+  select * into v_leitura from clube.ler_carteirinha(v_parceiro, p_token);
+
+  select v.membro_id into v_membro from clube.validacoes v where v.id = v_leitura.validacao_id;
+  v_cli := cash.cliente_do_membro(v_membro);
+
   return query
-    select c.id, c.nome,
-           cash.pode_usar_na_loja(c.id, v_loja),
-           cash.saldo(cash.conta_acumulo(c.id))
+    select v_cli, c.nome,
+           cash.pode_usar_na_loja(v_cli, v_loja),
+           cash.saldo(cash.conta_acumulo(v_cli)),
+           v_leitura.validacao_id,
+           v_leitura.nivel
       from cash.clientes c where c.id = v_cli;
 end $$;
 
+-- O CASHBACK NO LUGAR DO DESCONTO. É a frase dele, inteira: *"em vez de aplicar o
+-- desconto no preço, ele vai acrescentar esse valor do desconto no saldo do
+-- usuário"*. O `p_validacao` é a leitura da carteirinha que acabou de acontecer --
+-- é ele que amarra o crédito ao atendimento, e é por ele que se responde depois
+-- "de onde veio este saldo".
 create or replace function public.cash_balcao_dar_cashback(
   p_cliente uuid, p_valor_compra numeric,
   p_presencial boolean default true, p_restrito boolean default false,
-  p_chave text default null
+  p_chave text default null, p_validacao uuid default null
 ) returns uuid
 language plpgsql security definer
 set search_path to 'cash', 'public', 'pg_temp'
 as $$
-declare v_loja uuid := cash.loja_do_usuario();
+declare
+  v_loja uuid := cash.loja_do_usuario();
+  v_id uuid;
 begin
   if v_loja is null then raise exception 'nao_e_lojista'; end if;
-  return cash.dar_cashback(v_loja, p_cliente, p_valor_compra, p_presencial, p_restrito, p_chave);
+  v_id := cash.dar_cashback(v_loja, p_cliente, p_valor_compra, p_presencial, p_restrito, p_chave);
+  if p_validacao is not null then
+    update cash.lancamentos set clube_validacao_id = p_validacao where id = v_id;
+  end if;
+  return v_id;
 end $$;
 
 create or replace function public.cash_balcao_pedir_pagamento(
@@ -170,8 +286,8 @@ end $$;
 -- As cobranças desta loja esperando o cliente confirmar. Sem isto o balcão fica
 -- cego entre o "pedi" e o "confirmou", e vendedor cego toca o botão de novo.
 create or replace function public.cash_balcao_pendentes()
-returns table(id uuid, cliente_nome text, cliente_telefone text,
-              valor_compra numeric, valor_em_cash numeric, criado_em timestamptz)
+returns table(id uuid, cliente_nome text, valor_compra numeric, valor_em_cash numeric,
+              criado_em timestamptz)
 language plpgsql security definer
 set search_path to 'cash', 'public', 'pg_temp'
 as $$
@@ -179,7 +295,7 @@ declare v_loja uuid := cash.loja_do_usuario();
 begin
   if v_loja is null then return; end if;
   return query
-    select p.id, c.nome, c.telefone, p.valor_compra, p.valor_em_cash, p.criado_em
+    select p.id, c.nome, p.valor_compra, p.valor_em_cash, p.criado_em
       from cash.pagamentos_pendentes p
       join cash.clientes c on c.id = p.cliente_id
      where p.loja_id = v_loja
@@ -214,7 +330,6 @@ begin
   return cash.reciclar(v_loja, p_valor, p_chave);
 end $$;
 
--- PEDIR o saque, não sacar. Ver o comentário da tabela acima.
 create or replace function public.cash_balcao_pedir_saque(p_valor numeric)
 returns uuid
 language plpgsql security definer
@@ -245,46 +360,23 @@ begin
   return v_id;
 end $$;
 
--- --- a fronteira do CLIENTE (a carteira) ---------------------------------------
+-- --- a fronteira do CLIENTE (a carteira, dentro do Clube) -----------------------
 
--- Liga o login à carteira. NÃO recebe telefone: lê o do próprio login. Ver o
--- bloco vermelho do cabeçalho.
+-- Liga a carteira ao login. NÃO recebe identificador nenhum: quem está logado é
+-- quem é. Para existir carteira, a pessoa precisa ser membro do Clube -- é a base
+-- que o dono escolheu, e ela já tem 3.903 pessoas com login.
 create or replace function public.cash_entrar()
 returns uuid
 language plpgsql security definer
 set search_path to 'cash', 'public', 'pg_temp'
 as $$
-declare
-  v_tel text := regexp_replace(coalesce(auth.jwt() ->> 'phone', ''), '[^0-9]', '', 'g');
-  v_uid uuid := auth.uid();
-  v_cli uuid;
 begin
-  if v_uid is null then raise exception 'precisa_entrar'; end if;
-  if length(v_tel) < 10 then
-    raise exception 'precisa_entrar_por_telefone'
-      using hint = 'A carteira é ligada ao número que recebeu o código. Entre pelo telefone.';
+  if auth.uid() is null then raise exception 'precisa_entrar'; end if;
+  if not exists (select 1 from clube.perfis where id = auth.uid()) then
+    raise exception 'precisa_ser_do_clube'
+      using hint = 'A carteira de cash é do membro do Clube. Entre no Clube primeiro.';
   end if;
-
-  -- O telefone do Brasil chega no login com o 55 na frente; o cadastro do balcão
-  -- é digitado sem. Sem tirar o 55 aqui, a MESMA pessoa viraria dois clientes --
-  -- um com saldo, outro vazio, e ela veria a carteira vazia sem entender.
-  if length(v_tel) > 11 and left(v_tel, 2) = '55' then v_tel := substr(v_tel, 3); end if;
-
-  select id into v_cli from cash.clientes where telefone = v_tel;
-  if v_cli is null then
-    v_cli := cash.achar_ou_criar_cliente(v_tel, '');
-  end if;
-
-  update cash.clientes set auth_user_id = v_uid
-   where id = v_cli and (auth_user_id is null or auth_user_id = v_uid);
-
-  if not exists (select 1 from cash.clientes where id = v_cli and auth_user_id = v_uid) then
-    -- Já tem outro login amarrado neste número. Não rouba: recusa e deixa para
-    -- gente resolver -- é dinheiro de alguém do outro lado.
-    raise exception 'telefone_de_outra_conta';
-  end if;
-
-  return v_cli;
+  return cash.cliente_do_membro(auth.uid());
 end $$;
 
 create or replace function public.cash_minha_carteira()
@@ -309,9 +401,9 @@ begin
       from cash.clientes c where c.id = v_cli;
 end $$;
 
--- O terceiro saldo: o que só vale numa loja. A tela TEM que mostrar isso
--- separado e com o nome da loja -- saldo que a pessoa acha que é livre e não é
--- vira briga no caixa.
+-- O terceiro saldo: o que só vale numa loja. A tela TEM que mostrar isso separado
+-- e com o nome da loja -- saldo que a pessoa acha que é livre e não é vira briga
+-- no caixa.
 create or replace function public.cash_meus_restritos()
 returns table(loja_id uuid, loja_nome text, valor numeric, vence_em date)
 language plpgsql security definer
@@ -394,23 +486,50 @@ begin
      limit greatest(1, least(p_limite, 200));
 end $$;
 
--- O mapa de onde gastar. Aceitação é incondicional, então toda loja ativa da
--- rede serve -- a lista existe para a pessoa SABER disso.
+-- O MAPA DE ONDE GASTAR. Aceitação é incondicional, então toda loja ativa da rede
+-- serve -- esta lista existe para a pessoa SABER disso. É o "mapa de lojas
+-- parceiras" que ele pediu desde a primeira conversa.
 create or replace function public.cash_lojas_da_rede()
-returns table(loja_id uuid, nome text, cashback_percentual numeric, catalogo_slug text)
+returns table(loja_id uuid, nome text, cashback_percentual numeric,
+              catalogo_slug text, clube_parceiro_id uuid)
 language sql security definer
 set search_path to 'cash', 'public', 'pg_temp'
 as $$
-  select l.id, l.nome, l.cashback_percentual, l.catalogo_loja_slug
+  select l.id, l.nome, l.cashback_percentual, l.catalogo_loja_slug, l.clube_parceiro_id
     from cash.lojas l where l.ativa order by l.nome;
 $$;
 
 -- --- a fronteira do ADMINISTRADOR ----------------------------------------------
--- `public.e_admin()` é a do Catálogo, e ela já recusa quem está bloqueado (a
--- 0259 fechou a janela de uma hora do token que ainda valia). Função nova que
--- decide "quem é admin" tem que passar por ela, nunca conferir `role` por fora.
+-- `public.e_admin()` é a do Catálogo, e ela já recusa quem está bloqueado (a 0259
+-- fechou a janela de uma hora do token que ainda valia). Função nova que decide
+-- "quem é admin" tem que passar por ela, nunca conferir `role` por fora.
 
-create or replace function public.cash_admin_cadastrar_loja(
+-- Põe um PARCEIRO DO CLUBE no cashback, copiando o nome (regra 3).
+create or replace function public.cash_admin_ligar_parceiro(
+  p_clube_parceiro_id uuid, p_cashback_percentual numeric
+) returns uuid
+language plpgsql security definer
+set search_path to 'cash', 'public', 'pg_temp'
+as $$
+declare
+  v_id uuid;
+  v_nome text;
+begin
+  if not public.e_admin() then raise exception 'so_admin'; end if;
+
+  select nome into v_nome from clube.parceiros where id = p_clube_parceiro_id;
+  if v_nome is null then raise exception 'parceiro_nao_encontrado'; end if;
+
+  insert into cash.lojas (nome, cashback_percentual, clube_parceiro_id)
+  values (v_nome, p_cashback_percentual, p_clube_parceiro_id)
+  on conflict (clube_parceiro_id) where clube_parceiro_id is not null
+  do update set cashback_percentual = excluded.cashback_percentual,
+                nome = excluded.nome, ativa = true
+  returning id into v_id;
+  return v_id;
+end $$;
+
+create or replace function public.cash_admin_ligar_loja_do_catalogo(
   p_catalogo_loja_id uuid, p_cashback_percentual numeric
 ) returns uuid
 language plpgsql security definer
@@ -426,14 +545,11 @@ begin
   select nome, slug into v_nome, v_slug from public.lojas where id = p_catalogo_loja_id;
   if v_nome is null then raise exception 'loja_do_catalogo_nao_encontrada'; end if;
 
-  -- REGRA 3 DA GAVETA: o dado de referência se COPIA, não se lê do vizinho. O
-  -- nome e o slug ficam aqui para a gaveta sair inteira no dia de separar.
   insert into cash.lojas (nome, cashback_percentual, catalogo_loja_id, catalogo_loja_slug)
   values (v_nome, p_cashback_percentual, p_catalogo_loja_id, v_slug)
   on conflict (catalogo_loja_id) where catalogo_loja_id is not null
   do update set cashback_percentual = excluded.cashback_percentual,
-                nome = excluded.nome,
-                catalogo_loja_slug = excluded.catalogo_loja_slug,
+                nome = excluded.nome, catalogo_loja_slug = excluded.catalogo_loja_slug,
                 ativa = true
   returning id into v_id;
   return v_id;
@@ -548,10 +664,10 @@ begin
 end $$;
 
 -- 🔴 NOME DE COLUNA DE SAÍDA IGUAL A NOME DE COLUNA DE TABELA É AMBÍGUO, e o
--- Postgres só reclama QUANDO A FUNÇÃO RODA -- o `create or replace` passa liso,
--- o plantio fica verde, e o erro aparece na primeira chamada de verdade
--- ("column reference \"loja_id\" is ambiguous"). Aconteceu em três funções
--- deste arquivo, achado pelo `fronteira.sql`.
+-- Postgres só reclama QUANDO A FUNÇÃO RODA -- o `create or replace` passa liso, o
+-- plantio fica verde, e o erro aparece na primeira chamada de verdade ("column
+-- reference \"loja_id\" is ambiguous"). Aconteceu em três funções deste arquivo,
+-- achado pelo `fronteira.sql`.
 --
 -- Por isso toda consulta aqui qualifica a coluna com o apelido da tabela, SEM
 -- exceção -- e por isso o `fronteira.sql` CHAMA todas as funções da fronteira em
@@ -576,8 +692,6 @@ begin
   end loop;
 end $$;
 
--- E as duas de dentro da gaveta, que a tela não alcança de jeito nenhum (sem
--- `usage` no schema), mas que o `revoke` fecha de qualquer forma -- cinto e
--- suspensório custam uma linha.
 revoke all on function cash.loja_do_usuario() from public, anon;
 revoke all on function cash.cliente_do_usuario() from public, anon;
+revoke all on function cash.cliente_do_membro(uuid) from public, anon;
