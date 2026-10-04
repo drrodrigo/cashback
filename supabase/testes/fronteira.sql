@@ -58,8 +58,10 @@ begin
   -- --- bancada, como superusuário ---------------------------------------------
 
   -- O Clube: dois parceiros com dono, dois membros com carteirinha.
-  insert into clube.parceiros (nome, dono_id, ativo) values ('Parceiro Um', u_parc1, true) returning id into p_clube1;
-  insert into clube.parceiros (nome, dono_id, ativo) values ('Parceiro Dois', u_parc2, true) returning id into p_clube2;
+  insert into clube.parceiros (nome, dono_id, ativo, cidade, uf)
+  values ('Parceiro Um', u_parc1, true, 'Lagoa Santa', 'MG') returning id into p_clube1;
+  insert into clube.parceiros (nome, dono_id, ativo, cidade, uf)
+  values ('Parceiro Dois', u_parc2, true, 'Belo Horizonte', 'MG') returning id into p_clube2;
   insert into clube.perfis (id, nome, telefone) values (u_mem1, 'Ana do Clube', '(31) 98888-0000');
   insert into clube.perfis (id, nome, telefone) values (u_mem2, 'Bruno do Clube', '31977770000');
   insert into clube.carteirinhas (membro_id, codigo_publico) values (u_mem1, 'ABC1234567');
@@ -151,6 +153,48 @@ begin
   --    dele; o parceiro lê. Repare o que isto faz de graça: o cliente do cash
   --    NASCE do membro do Clube, com nome e telefone COPIADOS (regra 3) -- não há
   --    cadastro nenhum a preencher no caixa.
+  -- 🔴 PRIMEIRO O CASO DE QUEM NÃO ATIVOU, que vem de graça porque ninguém
+  --    aderiu ainda. A conta NASCE DE UM CLIQUE DELE, não de uma venda: creditar
+  --    numa conta que ninguém abriu é conta fantasma COM DINHEIRO -- a pessoa
+  --    passaria a ter saldo num produto em que nunca entrou.
+  perform set_config('request.jwt.claim.sub', u_mem1::text, true);
+  v_token := clube.emitir_token_carteirinha();
+  perform set_config('request.jwt.claim.sub', u_parc1::text, true);
+  begin
+    perform * from public.cash_balcao_ler_carteirinha(v_token);
+    v_ok := false;
+  exception when others then v_ok := sqlerrm like '%membro_nao_ativou%';
+  end;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
+         || 'o balcao recusa quem ainda nao ativou o cashback' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
+  -- E a carteira de quem não ativou devolve UMA LINHA dizendo isso, não vazio --
+  -- é o que deixa a tela desenhar o botão "ativar" em vez de adivinhar entre
+  -- "não aderiu" e "deu erro".
+  perform set_config('request.jwt.claim.sub', u_mem1::text, true);
+  select aderiu, falta_para_liberar into v_ok, v_num from public.cash_minha_carteira();
+  v_ok := v_ok is false and v_num = 30;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
+         || 'quem nao ativou ve aderiu=false e faltam 30 (' || coalesce(v_num,-1) || ')' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
+  -- 🔴 O BOTÃO DE ATIVAR. Saldo zero, nome e telefone copiados do Clube.
+  select cliente_id, nome, saldo into v_cli1, v_txt, v_num from public.cash_aderir();
+  v_ok := v_cli1 is not null and v_txt = 'Ana do Clube' and v_num = 0;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
+         || 'ativar abre a conta com saldo zero e o nome do Clube (' || coalesce(v_txt,'nada') || ')' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
+  -- Tocar duas vezes no "ativar" não cria segunda conta nem reinicia a adesão.
+  -- É celular: o dedo tremido é mais provável aqui que no balcão.
+  select cliente_id into v_cli2 from public.cash_aderir();
+  select count(*) into v_n from public.cash_minha_carteira() where aderiu;
+  v_ok := v_cli2 = v_cli1 and v_n = 1;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
+         || 'ativar duas vezes e a mesma conta' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
   perform set_config('request.jwt.claim.sub', u_mem1::text, true);
   v_token := clube.emitir_token_carteirinha();
 
@@ -231,23 +275,24 @@ begin
   perform set_config('request.jwt.claim.sub', u_mem1::text, true);
   v_ok := public.cash_entrar() = v_cli1;
   r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
-         || 'o membro do Clube cai na carteira que o balcao criou' || E'\n';
+         || 'o membro do Clube cai na conta que ele mesmo abriu' || E'\n';
   if v_ok is not true then v_falhas := v_falhas + 1; end if;
 
-  select acumulado, pode_descer into v_num, v_ok from public.cash_minha_carteira();
-  v_ok := v_num = 40 and v_ok;
+  select acumulado, pode_descer, falta_para_liberar
+    into v_num, v_ok, v_n2 from public.cash_minha_carteira();
+  v_ok := v_num = 40 and v_ok and v_n2 = 0;
   r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
-         || 'a carteira mostra os 40 e libera a descida (gatilho 30)' || E'\n';
+         || 'com 40 juntados nao falta nada e a descida libera' || E'\n';
   if v_ok is not true then v_falhas := v_falhas + 1; end if;
 
   perform set_config('request.jwt.claim.sub', u_fora::text, true);
   begin
-    perform public.cash_entrar();
+    perform * from public.cash_aderir();
     v_ok := false;
   exception when others then v_ok := sqlerrm like '%precisa_ser_do_clube%';
   end;
   r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
-         || 'quem nao e do Clube nao tem carteira de cash' || E'\n';
+         || 'quem nao e do Clube nao consegue ativar o cashback' || E'\n';
   if v_ok is not true then v_falhas := v_falhas + 1; end if;
 
   -- 13. O cliente desce e paga. 🔴 E CONFIRMAR COBRANÇA DE OUTRO É GASTAR O SALDO
@@ -259,8 +304,26 @@ begin
   perform set_config('request.jwt.claim.sub', u_parc1::text, true);
   v_pag := public.cash_balcao_pedir_pagamento(v_cli1, 100, 40);
 
+  -- O membro dois ATIVA a conta dele também: sem isso ele não tem carteira, o
+  -- erro viria por outro motivo (`precisa_entrar`) e o caso mediria a coisa
+  -- errada -- dois caminhos dando o mesmo vermelho por razões diferentes é o
+  -- caminho feliz com outro nome.
   perform set_config('request.jwt.claim.sub', u_mem2::text, true);
-  v_cli2 := public.cash_entrar();
+  select cliente_id into v_cli2 from public.cash_aderir();
+
+  -- 🔴 O CICLO MEDIDO COM CONFLITO. Os dois casos que eu tinha davam `falta = 0`
+  -- (quem já juntou os 30) e `falta = 30` (quem não aderiu, que vem de um ramo
+  -- com o valor fixo). Falsifiquei pondo `falta` em ZERO sempre e a trava ficou
+  -- VERDE: nenhum dos dois distinguia o cálculo. Quem distingue é alguém que
+  -- ADERIU e tem saldo abaixo do gatilho -- aqui, o membro dois, com conta aberta
+  -- e zero juntado. Entrada em que os dois caminhos dão o mesmo resultado não
+  -- mede caminho nenhum; é o caminho feliz com outro nome.
+  select aderiu, falta_para_liberar into v_ok, v_num from public.cash_minha_carteira();
+  v_ok := v_ok and v_num = 30;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
+         || 'quem ADERIU e tem zero juntado ve faltar 30 (' || coalesce(v_num,-1) || ')' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
   begin
     perform public.cash_confirmar(v_pag);
     v_ok := false;
@@ -369,6 +432,15 @@ begin
   v_ok := v_n = 3;
   r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
          || 'o mapa da rede mostra as 3 lojas ligadas (' || v_n || ')' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
+  -- 19b. A BUSCA, que e como ela acha onde gastar. Pedaco do nome e pedaco da
+  --      cidade, sem diferenciar maiuscula.
+  select count(*) into v_n from public.cash_lojas_da_rede('parceiro');
+  select count(*) into v_n2 from public.cash_lojas_da_rede('LAGOA');
+  v_ok := v_n = 2 and v_n2 = 1;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
+         || 'a busca acha por nome (' || v_n || ') e por cidade (' || v_n2 || ')' || E'\n';
   if v_ok is not true then v_falhas := v_falhas + 1; end if;
 
   -- 20. E DEPOIS DE TUDO, A CONTA FECHA. É a única medida que não se pode dar por
