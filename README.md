@@ -152,3 +152,16 @@ nos dois sem ninguém lembrar de trocar nada.
 
 Isto só é seguro porque aqui não há roteador de caminho: a tela é uma, e o que
 muda é o estado.
+
+### 🔴 A dependência tem que estar DECLARADA AQUI, não só na raiz
+
+Aqui dentro desta sessão o `@supabase/supabase-js` resolve pela `node_modules` da
+RAIZ -- o build local passa sem o `cash/package.json` declarar nada. **Na Vercel
+não:** com *Root Directory* = `cash`, ela instala a partir deste
+`package.json` e mais nada. O build quebraria com *"cannot resolve
+@supabase/supabase-js"* **depois** de criar o projeto, no painel, e quem iria
+depurar isso é ele.
+
+É a mesma família do *"o repositório não prova a produção"*: o build que passa
+aqui mede a árvore de pastas daqui, não a de lá. Pasta aninhada que vira projeto
+próprio precisa declarar o que usa.
