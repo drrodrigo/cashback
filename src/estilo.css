@@ -233,3 +233,242 @@ button.discreto:hover { background: var(--surface-2); color: var(--ink); }
   .conteudo { padding: 14px; gap: 14px; }
   .topo { padding: 12px 14px; }
 }
+
+/* ===========================================================================
+   A CONTA DA PESSOA (`ca-`)
+   ---------------------------------------------------------------------------
+   Prefixo próprio porque prefixo de CSS é espaço compartilhado -- duas folhas
+   com o mesmo prefixo se pintam uma à outra e ninguém entende por quê (lição de
+   29/09, quando o tema de camping ia nascer com o `.br-` do Brasa). As classes
+   sem prefixo deste arquivo (`.painel`, `.saldo`, `.extrato`) são da
+   DEMONSTRAÇÃO, e por isso a conta usa `ca-` em tudo.
+
+   É tela de celular primeiro: a pessoa abre isto no caixa, com uma mão. Nada de
+   largura fixa, e o gutter de 16px vale até os 320px (lição de 29/09 outra vez,
+   quando dois temas subiram com rolagem lateral).
+   =========================================================================== */
+
+.ca-topo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 1.25rem 1rem 0.5rem;
+  max-width: 34rem;
+  margin: 0 auto;
+}
+
+.ca-topo h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
+  color: var(--accent);
+}
+
+.ca-tagline {
+  margin: 0;
+  /* Bloco claro, mas a cor do parágrafo vai EXPLÍCITA: regra de elemento ganha
+     de herança, e `p { color: ... }` da plataforma já apagou texto em bloco
+     escuro antes (lição de 26/09). */
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.ca-voltar {
+  margin-top: 0.5rem;
+  align-self: flex-start;
+  color: var(--accent);
+  font-size: 0.9rem;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.ca-voltar:hover { text-decoration: underline; }
+
+.ca-cartao {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.1rem 1rem;
+  margin: 0.75rem auto;
+  max-width: 34rem;
+  /* `calc` com o gutter em vez de largura fixa: é isto que impede a rolagem
+     lateral numa tela de 320px. */
+  width: calc(100% - 2rem);
+  box-sizing: border-box;
+}
+
+.ca-cartao h2 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+.ca-destaque { border-color: var(--accent); border-width: 2px; }
+
+.ca-numerao {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 2.1rem;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--ink);
+  /* O número é o que ela abre o aplicativo para ver. Em telas estreitas um
+     valor grande com fonte mono estoura; `clamp` segura sem cortar. */
+  font-size: clamp(1.6rem, 9vw, 2.1rem);
+}
+
+.ca-rotulo {
+  margin: 0 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.ca-ciclo {
+  margin: 0 0 0.5rem;
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.ca-prazo {
+  margin: 0.25rem 0 0.5rem;
+  color: var(--sai);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.ca-dica {
+  margin: 0.35rem 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.ca-erro {
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--erro) 12%, transparent);
+  color: var(--erro);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.ca-barra {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+  margin-bottom: 0.9rem;
+}
+
+.ca-barra-dentro {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.ca-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+.ca-form input,
+.ca-cartao input[type='text'] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--ground);
+  color: var(--ink);
+  font: inherit;
+  /* 16px no celular, senão o iPhone dá zoom no campo e a tela "salta". */
+  font-size: max(1rem, 16px);
+}
+
+.ca-botao {
+  display: inline-block;
+  padding: 0.8rem 1rem;
+  border: 0;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  font-size: 1rem;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  /* Alvo de toque de 44px: é um botão que se aperta no caixa, com pressa. */
+  min-height: 44px;
+}
+
+.ca-botao:hover { background: var(--accent-forte); }
+.ca-botao:disabled { opacity: 0.6; cursor: progress; }
+
+.ca-sair {
+  display: block;
+  margin: 1rem auto 2.5rem;
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.ca-lojas,
+.ca-extrato {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.ca-lojas li,
+.ca-extrato li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--line);
+  /* `min-width: 0` para nome de loja comprido quebrar em vez de empurrar a
+     linha e criar rolagem lateral. */
+  min-width: 0;
+}
+
+.ca-lojas li:last-child,
+.ca-extrato li:last-child { border-bottom: 0; padding-bottom: 0; }
+
+.ca-pct {
+  color: var(--entra);
+  font-weight: 700;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+}
+
+.ca-extrato .ca-valor {
+  color: var(--ink);
+  font-family: var(--mono);
+  font-weight: 500;
+}
+
+.ca-cartao code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  background: var(--surface-2);
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
+  /* Nome de variável é comprido e não tem espaço: sem isto ele empurra a caixa
+     e a página ganha rolagem lateral no celular. */
+  overflow-wrap: anywhere;
+}

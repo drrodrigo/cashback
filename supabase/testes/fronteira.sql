@@ -23,6 +23,7 @@ declare
   r text := E'\n';
   v_falhas int := 0;
   v_ok boolean;
+  v_ok2 boolean;
   v_n int;
   v_n2 int;
   v_num numeric;
@@ -284,6 +285,25 @@ begin
   v_ok := v_num = 40 and v_ok and v_n2 = 0;
   r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
          || 'com 40 juntados nao falta nada e a descida libera' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
+  -- 🔴 E A TELA SABE DISSO ANTES DE DESENHAR O BOTÃO. Sem `e_do_clube`, a
+  --    carteira devolvia `aderiu = false` tanto para quem é do Clube e não
+  --    ativou quanto para quem não é do Clube -- e o botão "Ativar" apareceria
+  --    para as duas, existindo só para falhar numa delas. Porta pintada na
+  --    parede. Este é o caso com CONFLITO: os dois estados existem aqui.
+  perform set_config('request.jwt.claim.sub', u_fora::text, true);
+  select e_do_clube, aderiu into v_ok, v_ok2 from public.cash_minha_carteira();
+  v_ok := v_ok is false and v_ok2 is false;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
+         || 'quem nao e do Clube ve e_do_clube=false (e o botao nao aparece)' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
+  perform set_config('request.jwt.claim.sub', u_mem1::text, true);
+  select e_do_clube, aderiu into v_ok, v_ok2 from public.cash_minha_carteira();
+  v_ok := v_ok and v_ok2;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
+         || 'o membro que ativou ve e_do_clube=true e aderiu=true' || E'\n';
   if v_ok is not true then v_falhas := v_falhas + 1; end if;
 
   perform set_config('request.jwt.claim.sub', u_fora::text, true);
