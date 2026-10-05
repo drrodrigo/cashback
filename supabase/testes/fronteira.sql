@@ -26,6 +26,7 @@ declare
   v_n int;
   v_n2 int;
   v_num numeric;
+  v_num2 numeric;
   v_txt text;
   -- 🔴 O CLUBE PÕE O CÓDIGO DO ERRO NA *DICA* (`hint`) E A FRASE NA MENSAGEM; o
   -- cash faz o contrário. `sqlerrm` lê só a MENSAGEM, então um teste que confere
@@ -298,7 +299,29 @@ begin
   -- 13. O cliente desce e paga. 🔴 E CONFIRMAR COBRANÇA DE OUTRO É GASTAR O SALDO
   --     DELE: este caso tem CONFLITO de propósito -- os dois membros existem e o
   --     segundo tem carteira, então trocar o dono daria outro resultado.
+  -- 🔴 O PISO DA TRANSFERÊNCIA. Ter 40 juntados não deixa descer 10: quem desce
+  --    de 10 em 10 nunca junta, e a regra dos 30 deixa de pressionar. A frase
+  --    dele é "criar a VONTADE de juntar" -- o número existe para ela querer
+  --    achar a próxima loja da rede, não para travar o resgate.
   perform set_config('request.jwt.claim.sub', u_mem1::text, true);
+  begin
+    perform public.cash_descer(10);
+    v_ok := false;
+  exception when others then v_ok := sqlerrm like '%abaixo_do_minimo%';
+  end;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
+         || 'com 40 juntados nao da para transferir 10 (minimo e 30)' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
+  -- E a tela DIZ o mínimo e o teto, em vez de a pessoa descobrir pelo erro.
+  select minimo_para_transferir, pode_transferir_ate into v_num, v_num2
+    from public.cash_minha_carteira();
+  v_ok := v_num = 30 and v_num2 = 40;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
+         || 'a carteira diz minimo 30 e teto 40 (' || coalesce(v_num,-1) || ' e ' || coalesce(v_num2,-1) || ')' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
+  -- Acima do mínimo é livre: juntar não tem teto, então ela desce o que juntou.
   perform public.cash_descer(40);
 
   perform set_config('request.jwt.claim.sub', u_parc1::text, true);
