@@ -4,7 +4,7 @@
 -- NÃO APLICADO EM BANCO NENHUM (escrito em 14/09, refeito em 01/10 para as regras
 -- da gaveta). Plantado e provado no Postgres de mentira:
 --
---     bash bipechat/scripts/banco-de-mentira.sh --raiz cash --testes
+--     bash scripts/banco-de-mentira.sh --testes
 --
 -- O QUE MUDOU DE 14/09 PARA CÁ, e é o motivo deste arquivo ter sido refeito: naquele
 -- dia este cabeçalho dizia "esperando a decisão do projeto Supabase próprio (US$ 10/mês)".

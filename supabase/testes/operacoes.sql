@@ -6,7 +6,7 @@
 -- dele. Estes casos são os mesmos do motor de TypeScript, mais os três que só
 -- existem aqui (lote vencido não gastável, trava de linha, apagar em vez de zerar).
 --
--- Roda com: bash bipechat/scripts/banco-de-mentira.sh --raiz cash --testes
+-- Roda com: bash scripts/banco-de-mentira.sh --testes
 
 do $$
 declare

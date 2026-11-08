@@ -4,7 +4,7 @@
 -- aparece lendo o `.sql`: `revoke` escrito não prova porta fechada (são duas portas),
 -- e grant que falta não dá erro -- dá silêncio, três dias depois, numa Edge Function.
 --
--- Roda com: bash bipechat/scripts/banco-de-mentira.sh --raiz cash --testes
+-- Roda com: bash scripts/banco-de-mentira.sh --testes
 
 do $$
 declare

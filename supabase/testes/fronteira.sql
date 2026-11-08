@@ -16,7 +16,7 @@
 -- que não é carteirinha, parceiro que não é dono, carteirinha inativa) são o que
 -- protege o saldo de terceiro, então elas são medidas aqui, uma por uma.
 --
--- Roda com: bash bipechat/scripts/banco-de-mentira.sh --raiz cash --testes
+-- Roda com: bash scripts/banco-de-mentira.sh --testes
 
 do $$
 declare

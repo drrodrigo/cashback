@@ -18,7 +18,7 @@ order by 1;
 ```
 
 ```bash
-bash bipechat/scripts/banco-de-mentira.sh --raiz cash --testes   # 81 passos
+bash scripts/banco-de-mentira.sh --testes   # 81 passos
 ```
 
 Em 08/11 as **56 funções** bateram (na terceira volta: as duas primeiras acharam defeito). Fora da lista ficam, de propósito:

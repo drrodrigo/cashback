@@ -1,28 +1,25 @@
 import { defineConfig } from 'vitest/config'
 
-// Suíte própria do cash, separada da do Catálogo de propósito: são dois produtos
-// que não compartilham nada, e misturar as duas faz a do Catálogo carregar jsdom,
-// plugin de React e variáveis de Supabase para testar aritmética de dinheiro.
+// A suíte do cashback.
 //
-// Neste repositório ela roda pelo binário da raiz (`npm run test:cash`), porque
-// `npm install` dentro desta pasta quebra com um erro do próprio npm ("Cannot
-// read properties of null (reading 'edgesOut')").
+// Este arquivo mudou em 08/11/2026, quando o cashback saiu de dentro do
+// `drrodrigo/catologoonline` e virou repositório próprio. Lá ele era uma pasta
+// (`cash/`), e o `include` tinha que dizer `cash/src/**` porque o vitest resolvia
+// o padrão a partir da raiz do outro repositório -- rodar `npm test` de dentro da
+// pasta não achava teste nenhum, e a suíte só rodava por `npm run test:cash` de lá.
 //
-// 🔴 A CAUSA, medida em 08/11 ao preparar o projeto da Vercel: é um defeito do
-// npm 10.9.9 resolvendo os PEERS do `vitest` 4 (`#loadPeerSet` em
-// build-ideal-tree.js, no `@vitest/browser-playwright` que o vitest declara como
-// peer opcional). Não é a pasta aninhada, e não é este ambiente: aconteceria na
-// Vercel também, e o build do cash não subiria.
+// Aqui a raiz é esta, então o caminho é `src/**` e `npm test` funciona direto.
 //
-// O conserto é o `package-lock.json` desta pasta, versionado: com ele, tanto
-// `npm ci` quanto `npm install` passam (os dois medidos numa cópia limpa, fora
-// do repositório). Para GERAR o lockfile de novo, se um dia precisar, é
-// `npm install --legacy-peer-deps` -- que é o único jeito de passar pelo defeito.
-// Depois disso, `npm install && npm test` funciona sem mudar nada.
+// 🔴 E `npm install` precisa de `--legacy-peer-deps` para GERAR o lockfile: o npm
+// 10.9.9 estoura com "Cannot read properties of null (reading 'edgesOut')"
+// resolvendo os peers do `vitest` 4 (`#loadPeerSet`, pelo
+// `@vitest/browser-playwright` que ele declara como peer opcional). Por isso o
+// `package-lock.json` é versionado: COM ele, `npm ci` e `npm install` passam os
+// dois -- medido numa cópia limpa, e foi o que impediu o build da Vercel de
+// falhar no install antes de compilar uma linha.
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['cash/src/**/*.test.ts'],
-    root: '.',
+    include: ['src/**/*.test.ts'],
   },
 })

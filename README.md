@@ -4,8 +4,11 @@ Cashback com moeda própria: em vez de dar desconto, a loja devolve **cash**, qu
 cliente gasta em qualquer loja da rede. Desconto sai do caixa hoje; cash só é pago
 quando o cliente volta.
 
-O desenho completo (contas, regras, limite jurídico, modelo de receita) está em
-[`docs/superpowers/specs/2026-09-06-cashback-moeda-da-rede.md`](../docs/superpowers/specs/2026-09-06-cashback-moeda-da-rede.md).
+O desenho completo (contas, regras, limite jurídico, modelo de receita) mora no
+repositório onde o cashback nasceu:
+[`drrodrigo/catologoonline`, `docs/superpowers/specs/2026-09-06-cashback-moeda-da-rede.md`](https://github.com/drrodrigo/catologoonline/blob/feature/catalogo-saas/docs/superpowers/specs/2026-09-06-cashback-moeda-da-rede.md).
+A spec ficou lá de propósito: ela fala da rede inteira (Clube Prime, Catálogo,
+lojas), não só deste aplicativo.
 
 ## O estado hoje (14/09/2026)
 
@@ -55,7 +58,7 @@ npx vite build cash      # da raiz: gera cash/dist
 npx vite cash            # da raiz: abre em desenvolvimento
 
 # planta a gaveta num Postgres descartável e mede as regras dela:
-bash bipechat/scripts/banco-de-mentira.sh --raiz cash --testes
+bash scripts/banco-de-mentira.sh --testes
 ```
 
 O último é o que prova a migration antes de ela encostar no banco de verdade. São 12
