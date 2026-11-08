@@ -202,6 +202,31 @@ describe('onde ganhar, e a busca', () => {
     expect(texto(t)).not.toContain('Pet Amigo')
   })
 
+  // 🔴 ELE DITA POR VOZ, e o aplicativo transcreve "sao joao" tanto quanto
+  // "São João". O banco (`cash_lojas_da_rede`) já ignora o acento; se este
+  // filtro não ignorar, a loja volta do banco e o navegador a tira da lista --
+  // a lista PULA na mão dela, e a conclusão é que a loja não está na rede.
+  it('a busca ignora o acento, nos dois lados: "sao joao" acha "São João"', () => {
+    const t = montar({
+      lojas: [
+        { ...LOJAS[0], cidade: 'São João del Rei' },
+        { ...LOJAS[1], nome: 'José Pneus', cidade: 'Ipatinga' },
+      ],
+    })
+    const busca = t.querySelector('input[type="text"]') as HTMLInputElement
+
+    busca.value = 'sao joao'
+    busca.dispatchEvent(new Event('input'))
+    expect(texto(t)).toContain('Joalheria Sol')
+    expect(texto(t)).not.toContain('José Pneus')
+
+    // E o contrário: com acento digitado, achando o que está sem.
+    busca.value = 'josé'
+    busca.dispatchEvent(new Event('input'))
+    expect(texto(t)).toContain('José Pneus')
+    expect(texto(t)).not.toContain('Joalheria Sol')
+  })
+
   it('busca sem resultado diz isso, em vez de ficar em branco', () => {
     const t = montar({ lojas: LOJAS })
     const busca = t.querySelector('input[type="text"]') as HTMLInputElement

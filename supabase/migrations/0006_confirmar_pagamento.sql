@@ -23,8 +23,10 @@ begin
   v_id := cash.ja_feito(p_chave);
   if v_id is not null then return v_id; end if;
 
-  -- Trava a cobrança: dois toques no "confirmar" não viram dois débitos.
-  select * into v_pag from cash.pagamentos_pendentes where id = p_pagamento for update;
+  -- Trava a cobrança ABERTA: dois toques no "confirmar" não viram dois débitos, e
+  -- a cobrança já confirmada não é encontrada de novo (`confirmado_em is null`).
+  select * into v_pag from cash.pagamentos_pendentes
+   where id = p_pagamento and confirmado_em is null for update;
   if not found then
     raise exception 'cobranca_nao_encontrada' using hint = 'Cobrança não encontrada (ou já confirmada).';
   end if;
@@ -47,7 +49,19 @@ begin
                        cash.conta_recebido(v_pag.loja_id), v_do_disponivel, false, null);
   end if;
 
-  delete from cash.pagamentos_pendentes where id = p_pagamento;
+  -- 🔴 A COBRANÇA CONFIRMADA NÃO SE APAGA, ELA SE CARIMBA. Duas razões, e a
+  -- primeira é de dinheiro: a cobrança é o acordo entre as duas partes ("compra
+  -- de 100, 20 em cash"), e apagar o acordo no instante em que ele é cumprido
+  -- deixa o livro sem a prova do que foi acordado. O lançamento diz o que foi
+  -- movido; só a cobrança diz o que as duas partes combinaram ANTES.
+  --
+  -- A segunda é a ferramenta: `apply_migration` com `drop`, e também com `delete`,
+  -- PARA E ESPERA GENTE, e estoura em 60 segundos. Foi o que matou esta função
+  -- sete vezes em 04/10, e eu culpei o tamanho do envio -- errado: um comando de
+  -- 50 bytes falhava igual. Carimbar em vez de apagar foi o conserto dos dois
+  -- problemas de uma vez, e aplicou na primeira tentativa (08/11).
+  update cash.pagamentos_pendentes set confirmado_em = clock_timestamp()
+   where id = p_pagamento;
 
   v_id := cash.registrar(
     p_chave, 'pagamento', 'cliente:' || v_pag.cliente_id::text,

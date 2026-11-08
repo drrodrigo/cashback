@@ -29,7 +29,7 @@ export interface Carteira {
   pode_transferir_ate: number
 }
 
-/** Uma loja da rede, como `public.cash_lojas_da_rede()` devolve. */
+/** Uma loja da rede, como `public.cash_lojas_da_rede(p_busca)` devolve. */
 export interface LojaDaRede {
   loja_id: string
   nome: string
@@ -114,19 +114,32 @@ export function dataCurta(iso: string | null): string | null {
 }
 
 /**
+ * Tira acento e maiúscula, para comparar como gente digita.
+ *
+ * 🔴 Isto existe porque o BANCO passou a ignorar acento e este filtro NÃO -- e
+ * essa divergência é o defeito que o comentário da `filtrarLojas` já previa:
+ * `cash_lojas_da_rede('sao joao')` devolvia a loja, e o navegador tirava ela da
+ * lista de novo. A lista "pulava" na mão dela, e a conclusão da pessoa seria que
+ * a loja não está na rede.
+ */
+function semAcento(t: string): string {
+  return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+}
+
+/**
  * O que a busca de lojas devolve, filtrado no navegador também.
  *
  * O banco já filtra (`cash_lojas_da_rede(busca)`), e isto é a segunda camada:
  * enquanto ela digita, a lista responde sem ir e voltar na rede. As duas usam a
- * mesma regra -- nome ou cidade, sem diferenciar maiúscula -- de propósito: se
- * divergirem, o resultado muda quando a rede responde, e a lista "pula" na mão
- * dela.
+ * MESMA regra -- nome ou cidade, sem acento e sem diferenciar maiúscula -- de
+ * propósito: se divergirem, o resultado muda quando a rede responde, e a lista
+ * "pula" na mão dela. (No banco a mesma coisa é um `translate` com os acentos do
+ * português; aqui é `NFD`, que cobre esses e mais.)
  */
 export function filtrarLojas(lojas: LojaDaRede[], busca: string): LojaDaRede[] {
-  const b = busca.trim().toLowerCase()
+  const b = semAcento(busca.trim())
   if (!b) return lojas
   return lojas.filter(
-    (l) =>
-      l.nome.toLowerCase().includes(b) || (l.cidade ?? '').toLowerCase().includes(b),
+    (l) => semAcento(l.nome).includes(b) || semAcento(l.cidade ?? '').includes(b),
   )
 }

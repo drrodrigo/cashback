@@ -64,18 +64,35 @@ create unique index if not exists clientes_clube_idx on cash.clientes (clube_mem
 -- O TELEFONE DEIXA DE SER A CHAVE. Ele era `not null unique` porque era a
 -- identidade; agora a identidade é o membro do Clube, e o telefone é só cópia
 -- denormalizada (regra 3) para o balcão conferir com quem está falando. Dos
--- 3.903 membros, 6 não têm telefone -- com `not null` eles não entrariam.
-alter table cash.clientes alter column telefone drop not null;
-alter table cash.clientes drop constraint if exists clientes_telefone_key;
-create unique index if not exists clientes_telefone_idx on cash.clientes (telefone)
-  where telefone is not null and telefone <> '';
+-- 3.912 membros, 8 não têm telefone -- com `not null` eles não entrariam
+-- (medido em 08/11; em 04/10 eram 3.903 e 6).
+--
+-- 🔴 E AQUI O ARQUIVO MUDOU NA HORA DE APLICAR (08/11), porque a ferramenta
+-- manda. O plano era trocar a restrição `unique` por um índice PARCIAL
+-- (`where telefone is not null and telefone <> ''`). Duas coisas impediram:
+--
+-- a) `apply_migration` com `drop` no começo do comando PARA E ESPERA GENTE, e
+--    estoura em 60 s. `drop constraint` é `drop`.
+-- b) E não precisava: no Postgres, `unique` numa coluna aceita QUANTOS NULL
+--    quiser -- a restrição dessas 8 pessoas sem telefone não existia. O que
+--    atrapalhava era só o `not null`.
+--
+-- Então a restrição `clientes_telefone_key` FICOU, e só o `not null` saiu. O
+-- `alter column ... drop not null` passa porque vai dentro de um `execute`: o que
+-- a ferramenta recusa é comando que COMEÇA com `drop`. Medido, não suposto.
+do $migracao$
+begin
+  execute 'alter table cash.clientes alter column telefone drop not null';
+end $migracao$;
 
--- E QUEM LÊ O TELEFONE TEM QUE SABER DISSO. `on conflict (telefone)` não acha um
--- índice PARCIAL sozinho -- ele precisa do mesmo `where` para inferir o índice.
--- Trocar a restrição e não atualizar quem a usa é a lição de 12/09 (a coluna
--- criada sem atualizar o `minha_loja`), e aqui o plantio reprovou na hora: "there
--- is no unique or exclusion constraint matching the ON CONFLICT specification".
--- Trocar a chave e consertar quem a lê são a MESMA mudança, não duas.
+-- E QUEM LÊ O TELEFONE TEM QUE SABER DISSO. A primeira versão desta função usava
+-- `on conflict (telefone) where telefone is not null and telefone <> ''`, para
+-- casar com o índice parcial do plano acima -- e o plantio reprovou na hora:
+-- "there is no unique or exclusion constraint matching the ON CONFLICT
+-- specification" (`on conflict` não infere índice parcial sem o mesmo `where`).
+-- Como a restrição inteira ficou, o `on conflict (telefone)` seco é o certo.
+-- Trocar a chave e consertar quem a lê são a MESMA mudança, não duas -- é a
+-- lição de 12/09, a coluna criada sem atualizar o `minha_loja`.
 create or replace function cash.achar_ou_criar_cliente(p_telefone text, p_nome text default '')
 returns uuid
 language plpgsql as $$
@@ -88,7 +105,7 @@ begin
   end if;
 
   insert into cash.clientes (telefone, nome) values (v_tel, coalesce(p_nome, ''))
-  on conflict (telefone) where telefone is not null and telefone <> ''
+  on conflict (telefone)
   do update
     -- DUPLICAR FAZ BARULHO, SUBSTITUIR NÃO: o `do update` só preenche o nome
     -- quando ele está vazio, nunca por cima do que já existe.
@@ -298,7 +315,9 @@ begin
     select p.id, c.nome, p.valor_compra, p.valor_em_cash, p.criado_em
       from cash.pagamentos_pendentes p
       join cash.clientes c on c.id = p.cliente_id
-     where p.loja_id = v_loja
+     -- `confirmado_em is null`: a cobrança confirmada não se apaga (0013), então
+     -- quem pergunta "o que falta confirmar" tem que dizer isso na consulta.
+     where p.loja_id = v_loja and p.confirmado_em is null
      order by p.criado_em desc;
 end $$;
 
@@ -447,7 +466,7 @@ begin
     select p.id, l.nome, p.valor_compra, p.valor_em_cash, p.criado_em
       from cash.pagamentos_pendentes p
       join cash.lojas l on l.id = p.loja_id
-     where p.cliente_id = v_cli
+     where p.cliente_id = v_cli and p.confirmado_em is null
      order by p.criado_em desc;
 end $$;
 
@@ -463,7 +482,8 @@ begin
   -- gastar o saldo dele -- e não é a RLS que impede isso aqui (a gaveta não tem
   -- policy nenhuma, de propósito): é este `and cliente_id`.
   if not exists (select 1 from cash.pagamentos_pendentes
-                  where id = p_pagamento and cliente_id = v_cli) then
+                  where id = p_pagamento and cliente_id = v_cli
+                    and confirmado_em is null) then
     raise exception 'cobranca_nao_encontrada';
   end if;
   return cash.confirmar_pagamento(p_pagamento, p_chave);
@@ -517,7 +537,7 @@ declare
 begin
   if not public.e_admin() then raise exception 'so_admin'; end if;
 
-  select nome into v_nome from clube.parceiros where id = p_clube_parceiro_id;
+  select p.nome into v_nome from clube.parceiros p where p.id = p_clube_parceiro_id;
   if v_nome is null then raise exception 'parceiro_nao_encontrado'; end if;
 
   insert into cash.lojas (nome, cashback_percentual, clube_parceiro_id)
@@ -542,7 +562,8 @@ declare
 begin
   if not public.e_admin() then raise exception 'so_admin'; end if;
 
-  select nome, slug into v_nome, v_slug from public.lojas where id = p_catalogo_loja_id;
+  select lo.nome, lo.slug into v_nome, v_slug
+    from public.lojas lo where lo.id = p_catalogo_loja_id;
   if v_nome is null then raise exception 'loja_do_catalogo_nao_encontrada'; end if;
 
   insert into cash.lojas (nome, cashback_percentual, catalogo_loja_id, catalogo_loja_slug)
@@ -596,7 +617,7 @@ declare
 begin
   if not public.e_admin() then raise exception 'so_admin'; end if;
 
-  select * into v_ped from cash.saques_pedidos where id = p_pedido for update;
+  select s.* into v_ped from cash.saques_pedidos s where s.id = p_pedido for update;
   if not found then raise exception 'pedido_nao_encontrado'; end if;
   if v_ped.situacao <> 'pedido' then raise exception 'pedido_ja_resolvido'; end if;
 
@@ -692,6 +713,17 @@ begin
   end loop;
 end $$;
 
-revoke all on function cash.loja_do_usuario() from public, anon;
-revoke all on function cash.cliente_do_usuario() from public, anon;
-revoke all on function cash.cliente_do_membro(uuid) from public, anon;
+-- E a gaveta inteira: `from public, anon`, em TODAS as funções de `cash`, por
+-- varredura em vez de três linhas na mão. Lista escrita na mão cobre o que já
+-- aconteceu; a varredura cobre a próxima função que alguém criar aqui.
+do $portas_da_gaveta$
+declare f record;
+begin
+  for f in
+    select p.oid::regprocedure as assinatura
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'cash'
+  loop
+    execute format('revoke all on function %s from public, anon', f.assinatura);
+  end loop;
+end $portas_da_gaveta$;

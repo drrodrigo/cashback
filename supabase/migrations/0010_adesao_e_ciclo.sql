@@ -89,7 +89,7 @@ begin
     from clube.perfis p where p.id = v_uid;
   if not found then
     raise exception 'precisa_ser_do_clube'
-      using hint = 'A conta de cashback é do membro do Clube. Entre no Clube primeiro.';
+      using hint = 'A conta corrente de cash é do membro do Clube. Entre no Clube primeiro.';
   end if;
 
   insert into cash.clientes (clube_membro_id, nome, telefone, aderiu_em)
@@ -175,24 +175,36 @@ alter table cash.lojas add column if not exists uf char(2);
 -- ficar AMBÍGUA (a nova tem valor padrão), e o erro só apareceria na chamada.
 drop function if exists public.cash_lojas_da_rede();
 
+-- 🔴 A BUSCA IGNORA O ACENTO, e não é capricho: ele dita por voz e o aplicativo
+-- transcreve "sao joao", "josé", "ipatinga" de todas as formas. `ilike` sozinho
+-- resolve a maiúscula e NÃO resolve o acento -- quem digita "jose" não acha
+-- "José", e a pessoa conclui que a loja não está na rede. `unaccent` não está
+-- instalado neste banco (instalar extensão mexe no banco dos nove produtos), e
+-- `translate` faz o mesmo de graça, nos dois lados da comparação.
+--
+-- A UF sai como `text` e não como `char(2)`: `char` vem com espaço no fim e a
+-- tela mostrava "MG " com um buraco antes do fecha-parêntese.
 create or replace function public.cash_lojas_da_rede(p_busca text default null)
 returns table(loja_id uuid, nome text, cashback_percentual numeric,
-              cidade text, uf char(2), catalogo_slug text, clube_parceiro_id uuid)
+              catalogo_slug text, clube_parceiro_id uuid, cidade text, uf text)
 language sql security definer
 set search_path to 'cash', 'public', 'pg_temp'
 as $$
-  select l.id, l.nome, l.cashback_percentual, l.cidade, l.uf,
-         l.catalogo_loja_slug, l.clube_parceiro_id
+  select l.id, l.nome, l.cashback_percentual, l.catalogo_loja_slug,
+         l.clube_parceiro_id, l.cidade, l.uf::text
     from cash.lojas l
    where l.ativa
      and (
-       coalesce(btrim(p_busca), '') = ''
-       -- `unaccent` não está instalado neste banco, então a busca compara sem
-       -- diferenciar maiúscula (`ilike`) e aceita pedaço do nome ou da cidade.
-       -- Quem digita "joal" acha "Joalheria"; quem digita "lagoa" acha a cidade.
-       or l.nome ilike '%' || btrim(p_busca) || '%'
-       or coalesce(l.cidade, '') ilike '%' || btrim(p_busca) || '%'
+       p_busca is null or btrim(p_busca) = ''
+       or translate(lower(l.nome || ' ' || coalesce(l.cidade, '') || ' ' || coalesce(l.uf::text, '')),
+                    'áàâãäéèêëíìîïóòôõöúùûüçñ', 'aaaaaeeeeiiiiooooouuuucn')
+          like '%' || translate(lower(btrim(p_busca)),
+                    'áàâãäéèêëíìîïóòôõöúùûüçñ', 'aaaaaeeeeiiiiooooouuuucn') || '%'
      )
+   -- Por CIDADE e depois por nome: é o que agrupa a lista do jeito que a pessoa
+   -- lê ("onde eu posso gastar aqui perto"). Ordenar só por nome espalha as
+   -- cidades. (Foi a terceira coisa que a 0009 fora de ordem derrubou -- devolvida
+   -- pela `cash_0018_o_mapa_volta_a_agrupar_por_cidade`.)
    order by l.cidade nulls last, l.nome;
 $$;
 

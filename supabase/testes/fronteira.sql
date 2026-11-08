@@ -29,6 +29,7 @@ declare
   v_num numeric;
   v_num2 numeric;
   v_txt text;
+  v_cobranca_confirmada uuid;
   -- 🔴 O CLUBE PÕE O CÓDIGO DO ERRO NA *DICA* (`hint`) E A FRASE NA MENSAGEM; o
   -- cash faz o contrário. `sqlerrm` lê só a MENSAGEM, então um teste que confere
   -- apenas `sqlerrm` é CEGO para os códigos do Clube -- e foi exatamente isso que
@@ -384,6 +385,28 @@ begin
          || 'o dono confirma e os 40 saem da carteira dele (' || v_num || ')' || E'\n';
   if v_ok is not true then v_falhas := v_falhas + 1; end if;
 
+  -- 🔴 A COBRANÇA CONFIRMADA SAI DAS DUAS LISTAS E CONTINUA NA TABELA. São três
+  -- medidas, não uma: a tela do cliente, a tela do balcão, e a prova guardada.
+  -- Medir só uma delas deixaria passar o caso em que a lista some porque a linha
+  -- foi APAGADA -- que é exatamente o que esta mudança deixou de fazer.
+  -- A terceira medida (a linha continua na tabela) NÃO cabe aqui: ler
+  -- `cash.pagamentos_pendentes` vestindo `authenticated` dá "permission denied
+  -- for schema cash", e isso é a gaveta FUNCIONANDO. Ela vai no fim, depois do
+  -- `reset role`, guardada em `v_cobranca_guardada`.
+  select count(*) into v_n from public.cash_minhas_cobrancas();
+  perform set_config('request.jwt.claim.sub', u_parc1::text, true);
+  select count(*) into v_n2 from public.cash_balcao_pendentes();
+  v_cobranca_confirmada := v_pag;
+  -- Volta a vestir o membro um: o caso seguinte (o extrato) conta com ele, e
+  -- teste que deixa o papel trocado quebra o de baixo por um motivo que não é o
+  -- dele -- vermelho em caso que ninguém mexeu.
+  perform set_config('request.jwt.claim.sub', u_mem1::text, true);
+  v_ok := v_n = 0 and v_n2 = 0;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
+         || 'confirmada: sai da tela do cliente (' || v_n || ') e do balcao ('
+         || v_n2 || ')' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
   -- 14. O EXTRATO DIZ ONDE A PESSOA COMPROU, quanto e quando. O de um não é do
   --     outro, nem o de uma loja é da outra.
   select count(*) into v_n from public.cash_meu_extrato(200);
@@ -506,6 +529,38 @@ begin
   v_ok := v_n = 1;
   r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
          || 'o cashback fica amarrado a leitura da carteirinha (' || v_n || ')' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
+  -- 🔴 A BUSCA IGNORA O ACENTO, nos DOIS lados. Ele dita por voz e o aplicativo
+  -- transcreve "sao joao" tanto quanto "São João"; `ilike` sozinho resolve a
+  -- maiúscula e não o acento, e quem digita "jose" conclui que a loja não está
+  -- na rede. Mexo na cidade DEPOIS das contagens acima para não mover nenhuma.
+  update cash.lojas set cidade = 'São João del Rei' where id = v_loja2;
+  select count(*) into v_n  from public.cash_lojas_da_rede('sao joao');
+  select count(*) into v_n2 from public.cash_lojas_da_rede('São JOÃO');
+  v_ok := v_n = 1 and v_n2 = 1;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
+         || 'a busca acha a cidade com acento digitando sem (' || v_n
+         || ') e com (' || v_n2 || ')' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
+  -- E o caso que FALSIFICA o de cima: se a busca fosse ignorada, tudo acharia
+  -- tudo. Um pedaço que não existe em loja nenhuma tem que dar zero.
+  select count(*) into v_n from public.cash_lojas_da_rede('zzqx');
+  v_ok := v_n = 0;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
+         || 'busca que nao casa com nada devolve zero (' || v_n || ')' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
+  -- 🔴 E A COBRANÇA CONFIRMADA CONTINUA NA TABELA, carimbada. Sem esta medida, o
+  -- caso de cima passaria igual se a linha tivesse sido APAGADA -- que é
+  -- exatamente o que esta mudança deixou de fazer. Lista vazia não prova nada
+  -- sobre o motivo de estar vazia.
+  select count(*) into v_n from cash.pagamentos_pendentes
+   where id = v_cobranca_confirmada and confirmado_em is not null;
+  v_ok := v_n = 1;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
+         || 'a cobranca confirmada ficou guardada, com o carimbo (' || v_n || ')' || E'\n';
   if v_ok is not true then v_falhas := v_falhas + 1; end if;
 
   select telefone into v_txt from cash.clientes where id = v_cli1;

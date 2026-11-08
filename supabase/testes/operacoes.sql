@@ -284,6 +284,47 @@ begin
          || 'o mesmo telefone (com ou sem pontuacao) e o mesmo cliente' || E'\n';
   if v_ok is not true then v_falhas := v_falhas + 1; end if;
 
+  -- 23. 🔴 A COBRANÇA CONFIRMADA FICA GUARDADA, CARIMBADA. Ela é o acordo entre
+  --     as duas partes ("compra de 80, 20 em cash"); apagar o acordo no instante
+  --     em que ele é cumprido deixa o livro sem a prova do que foi combinado
+  --     ANTES de mover. O lançamento diz o que moveu; só a cobrança diz o que as
+  --     duas partes acertaram.
+  perform cash.dar_cashback(v_loja, v_cli, 500);
+  perform cash.descer_para_gastar(v_cli, 50);
+  v_pag := cash.pedir_pagamento(v_loja, v_cli, 80, 20);
+  -- O saldo ANTES, para medir o efeito de cada toque em vez de copiar um número
+  -- do código: o disponível aqui depende de vinte operações acima.
+  v_num := cash.saldo(cash.conta_disponivel(v_cli));
+  perform cash.confirmar_pagamento(v_pag, 'chave-da-23');
+  select count(*) into v_n from cash.pagamentos_pendentes
+   where id = v_pag and confirmado_em is not null;
+  v_ok := v_n = 1 and cash.saldo(cash.conta_disponivel(v_cli)) = v_num - 20;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
+         || 'o primeiro toque debitou 20 e a cobranca ficou na tabela, carimbada' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
+  -- 24. E CONFIRMAR A MESMA COBRANÇA DE NOVO É RECUSADO -- com uma chave de
+  --     idempotência DIFERENTE, de propósito. Com a mesma chave o `ja_feito`
+  --     devolveria o lançamento antigo e o caso passaria sem medir nada: seria
+  --     teste verde provando a trava errada. É o caso COM CONFLITO.
+  begin
+    perform cash.confirmar_pagamento(v_pag, 'outra-chave-24');
+    v_ok := false;
+  exception when others then
+    v_ok := sqlerrm like '%cobranca_nao_encontrada%';
+  end;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
+         || 'confirmar de novo (com OUTRA chave) e recusado: nao debita duas vezes' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
+  -- 25. E O SALDO PROVA QUE O SEGUNDO TOQUE NÃO MOVEU DINHEIRO. Só o passo 24
+  --     não bastava: a recusa poderia vir DEPOIS de debitar. O que fecha é o
+  --     saldo continuar exatamente onde o passo 23 o deixou (-20, não -40).
+  v_ok := cash.saldo(cash.conta_disponivel(v_cli)) = v_num - 20;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
+         || 'o segundo toque no confirmar nao tirou nada (debitou 20 no total)' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
   r := r || E'\n' || case when v_falhas = 0 then 'tudo certo' else v_falhas || ' FALHOU' end;
   raise exception 'RESULTADO >>> %', r;
 end $$;
