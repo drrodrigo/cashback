@@ -19,6 +19,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import type { Carteira, Lancamento, LojaDaRede } from './carteira/estado'
+import type { Cliente, Cobranca, MinhaLoja } from './balcao/estado'
 
 // `.trim()` porque copiar-e-colar em painel de deploy quase sempre traz um
 // espaço ou uma quebra de linha grudada no fim -- o Clube já pagou por isso.
@@ -131,4 +132,92 @@ export async function lerExtrato(): Promise<Lancamento[]> {
   const { data, error } = await cliente().rpc('cash_meu_extrato', { p_limite: 30 })
   if (error) throw error
   return (data as Lancamento[] | null) ?? []
+}
+
+// --- o BALCÃO -----------------------------------------------------------------
+//
+// Nenhuma destas lê tabela do schema `cash`: a gaveta é fechada (`anon` e
+// `authenticated` não têm nem `usage` nela), então quem serve o balcão é a mesma
+// camada curta de funções `public.cash_*`. Quem decide se a pessoa é lojista é o
+// banco, a cada chamada -- guardar isso aqui deixaria quem vendeu a loja
+// operando o balcão dela.
+
+export async function lerMinhaLoja(): Promise<MinhaLoja | null> {
+  const { data, error } = await cliente().rpc('cash_minha_loja')
+  if (error) throw error
+  return (data as MinhaLoja[] | null)?.[0] ?? null
+}
+
+/**
+ * Lê a carteirinha do cliente e devolve quem é.
+ *
+ * 🔴 O TOKEN SE GASTA AQUI. Ele vale 90 segundos e UMA vez -- quem autoriza é o
+ * Clube (`clube.ler_carteirinha`), não uma cópia da regra dele. Se a leitura
+ * falhar depois de o token ter sido consumido, o cliente toca na carteirinha de
+ * novo e sai outro: não há nada a desfazer, e é por isso que o crédito só é
+ * lançado no passo seguinte.
+ */
+export async function lerCarteirinha(token: string): Promise<Cliente | null> {
+  const { data, error } = await cliente().rpc('cash_balcao_ler_carteirinha', { p_token: token })
+  if (error) throw error
+  return (data as Cliente[] | null)?.[0] ?? null
+}
+
+/** Lança o cashback da compra na conta do cliente. */
+export async function darCashback(
+  clienteId: string,
+  valorDaCompra: number,
+  validacaoId: string | null,
+): Promise<void> {
+  // A CHAVE DE IDEMPOTÊNCIA, pelo mesmo motivo da transferência: é balcão, com
+  // fila atrás, e o dedo toca duas vezes. Sem ela o cliente ganha em dobro e o
+  // crédito da loja sai em dobro.
+  const chaveDoToque = `cashback:${clienteId}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`
+  const { error } = await cliente().rpc('cash_balcao_dar_cashback', {
+    p_cliente: clienteId,
+    p_valor_compra: valorDaCompra,
+    p_presencial: true,
+    p_restrito: false,
+    p_chave: chaveDoToque,
+    p_validacao: validacaoId,
+  })
+  if (error) throw error
+}
+
+/**
+ * PEDE a cobrança. Ela só vale depois que o cliente confirma na tela dele.
+ *
+ * Os dois números viram acordo entre as duas partes -- é isso que protege o
+ * cliente de um débito errado, e é por isso que o balcão não debita sozinho.
+ */
+export async function pedirPagamento(
+  clienteId: string,
+  valorDaCompra: number,
+  valorEmCash: number,
+): Promise<void> {
+  const { error } = await cliente().rpc('cash_balcao_pedir_pagamento', {
+    p_cliente: clienteId,
+    p_valor_compra: valorDaCompra,
+    p_valor_em_cash: valorEmCash,
+  })
+  if (error) throw error
+}
+
+/** As cobranças desta loja esperando confirmação. Sem isto o balcão fica cego. */
+export async function lerCobrancas(): Promise<Cobranca[]> {
+  const { data, error } = await cliente().rpc('cash_balcao_pendentes')
+  if (error) throw error
+  return (data as Cobranca[] | null) ?? []
+}
+
+export async function lerExtratoDaLoja(): Promise<Lancamento[]> {
+  const { data, error } = await cliente().rpc('cash_balcao_extrato', { p_limite: 30 })
+  if (error) throw error
+  return (data as Lancamento[] | null) ?? []
+}
+
+/** Pede o saque do que os clientes já pagaram. Quem manda o Pix é gente. */
+export async function pedirSaque(valor: number): Promise<void> {
+  const { error } = await cliente().rpc('cash_balcao_pedir_saque', { p_valor: valor })
+  if (error) throw error
 }

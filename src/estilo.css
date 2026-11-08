@@ -472,3 +472,148 @@ button.discreto:hover { background: var(--surface-2); color: var(--ink); }
      e a página ganha rolagem lateral no celular. */
   overflow-wrap: anywhere;
 }
+
+/* --- O BALCÃO ---------------------------------------------------------------
+   As peças que só o balcão usa. O resto (cartão, botão, formulário, topo) é
+   compartilhado com a carteira de propósito: são o mesmo produto, e duas caras
+   fariam o lojista achar que entrou no lugar errado. */
+
+/* Os dois números da loja, lado a lado e grandes: é o que o dono olha de longe. */
+.ca-numeros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0.75rem 0;
+}
+.ca-numero {
+  flex: 1 1 8rem;
+  min-width: 8rem;
+}
+.ca-numero strong {
+  display: block;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  color: var(--cash);
+}
+.ca-numero span {
+  display: block;
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+
+/* A PÍLULA DE ESCOLHA (padrão aprovado em 02/10): duas opções coladas, a
+   escolhida preenchida na cor da marca. Borda e letra claras, porque sobre fundo
+   escuro a borda escura some -- "só enxerga o amarelo". */
+.ca-escolha {
+  display: flex;
+  margin: 0.9rem 0;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.ca-escolha button {
+  flex: 1 1 0;
+  padding: 0.6rem 0.5rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ca-escolha button + button {
+  border-left: 1px solid rgba(255, 255, 255, 0.45);
+}
+.ca-escolha button.escolhido {
+  background: var(--cash);
+  color: #06201d;
+}
+
+.ca-campo {
+  display: block;
+  margin: 0.7rem 0;
+}
+.ca-campo span {
+  display: block;
+  font-size: 0.8rem;
+  opacity: 0.8;
+  margin-bottom: 0.25rem;
+}
+.ca-campo input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* A frase que o vendedor lê em voz alta. Ela é a peça mais importante da tela:
+   quem convence a pessoa a voltar é o vendedor dizendo o número. */
+.ca-frase {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0.4rem 0 0.2rem;
+}
+
+.ca-camera {
+  position: relative;
+  margin: 0.7rem 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  aspect-ratio: 4 / 3;
+}
+.ca-camera video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ca-recado {
+  margin: 0.5rem 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border-left: 3px solid var(--cash);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.9rem;
+}
+
+.ca-botao-fraco {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ca-link {
+  margin-top: 0.8rem;
+  border: 0;
+  background: none;
+  color: var(--cash);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+.ca-lista {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+}
+.ca-lista li {
+  padding: 0.5rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.92rem;
+}
+.ca-lista li strong {
+  color: var(--cash);
+}
+.ca-quando {
+  display: block;
+  font-size: 0.78rem;
+  opacity: 0.7;
+}

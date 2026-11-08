@@ -37,7 +37,8 @@ arquivos na ordem e a produção não tinha a mesma ordem.
 ```bash
 npm install                 # na 1a vez precisa de --legacy-peer-deps (ver vitest.config.ts)
 npm test                    # 54 testes (29 do motor + 25 da tela)
-npm run build               # com as VITE_*; sem elas o pacote sai com 10 kB em vez de 226 kB
+npm run build               # com as VITE_*; sem elas o `assets/dados-*.js` sai com 2,8 kB
+                            # em vez de 219 kB (olhe ESSE arquivo, não o index-*.js)
 npm run dev
 
 bash scripts/banco-de-mentira.sh --testes   # 81 passos num Postgres descartável, de graça

@@ -21,6 +21,10 @@ export default defineConfig({
       input: {
         // O endereço principal é a CONTA da pessoa -- é o que ele pediu.
         index: resolve(__dirname, 'index.html'),
+        // O BALCÃO da loja: a outra metade do produto, a que acontece na
+        // frente do cliente. Página separada de propósito -- quem atende é o
+        // lojista, no aparelho dele, e ele não tem o que fazer na carteira.
+        balcao: resolve(__dirname, 'balcao.html'),
         // A demonstração do modelo continua: é ela que mostra balcão, carteira,
         // rede e relógio sem depender de banco nenhum. Serve para explicar o
         // produto a quem nunca viu.

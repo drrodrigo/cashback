@@ -78,12 +78,15 @@ function aviso(texto: string): HTMLElement {
  * única que aparece quando NADA funciona -- e tela branca não diz nada a
  * ninguém.
  *
- * E a frase tem que mandar PUBLICAR DE NOVO, não só preencher: medido em 05/10,
- * o pacote construído sem as variáveis tem **9,66 kB**; com elas, **218,60 kB**.
- * A diferença é a biblioteca do Supabase inteira, que o empacotador ELIMINA
- * porque o ramo que a usa fica inalcançável. Não falta só o dado -- falta o
- * código. Preencher a variável no painel e não publicar de novo deixa no ar um
- * pacote que nunca vai conectar.
+ * E a frase tem que mandar PUBLICAR DE NOVO, não só preencher: o pacote
+ * construído sem as variáveis não tem a biblioteca do Supabase dentro -- o
+ * empacotador a ELIMINA porque o ramo que a usa fica inalcançável. Não falta só
+ * o dado, falta o código, e preencher no painel sem publicar de novo deixa no ar
+ * um pacote que nunca vai conectar.
+ *
+ * Medido: `assets/dados-*.js` sai com **2,84 kB** sem as variáveis e **219,02
+ * kB** com elas (08/11). Era o `index-*.js` que denunciava, até o balcão virar
+ * uma segunda página e a biblioteca mudar para o pedaço compartilhado.
  */
 function telaFaltaConfigurar(): HTMLElement {
   const s = el('section', { classe: 'ca-cartao' })

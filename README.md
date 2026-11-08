@@ -124,12 +124,12 @@ botão**. As onze travas que eu havia escrito liam o ARQUIVO. Esta monta a tela.
 
 ### 🔴 Sem as variáveis no build, falta o CÓDIGO -- não só o dado
 
-Medido em 05/10:
+Medido em 05/10, e **medido de novo em 08/11**, porque o número mudou de arquivo:
 
-| build | tamanho do pacote da conta |
+| build | o pedaço que denuncia |
 |---|---:|
-| **sem** `VITE_SUPABASE_URL` / `ANON_KEY` | **9,66 kB** |
-| **com** as duas | **218,60 kB** |
+| **sem** `VITE_SUPABASE_URL` / `ANON_KEY` | `assets/dados-*.js` com **2,84 kB** |
+| **com** as duas | `assets/dados-*.js` com **219,02 kB** |
 
 A diferença é a biblioteca do Supabase inteira. O empacotador a **elimina**
 porque, sem as variáveis, o ramo que chama `createClient` fica inalcançável em
@@ -139,8 +139,18 @@ tempo de build. Quer dizer:
 > que NUNCA vai conectar** -- e não por falta de dado, por falta de código.
 
 É a face mais afiada da regra *"variável `VITE_` só entra no site durante o
-BUILD"*. E dá uma conferência de fora, de graça: **pacote de ~10 kB no ar
-significa que o build saiu sem as variáveis.** Com elas são ~220 kB.
+BUILD"*.
+
+🔴 **E repare ONDE olhar, porque isso mudou em 08/11 e enganaria quem lembra do
+número antigo.** Quando existia uma página só, o peso ficava no `index-*.js`
+(9,66 kB contra 218,60 kB). Com a segunda página (o balcão), a biblioteca passou
+a morar no pedaço compartilhado `dados-*.js`, e o `index-*.js` tem **8,2 kB nos
+dois casos**. Quem conferir o arquivo errado conclui exatamente o contrário do
+que está acontecendo.
+
+A conferência de fora, de graça, continua existindo -- ela só aponta para outro
+arquivo: baixe o `index.html` publicado, siga os `<script>` dele, e olhe o
+tamanho do `dados-*.js`. **Menos de 10 kB ali significa build sem as variáveis.**
 
 Por isso o aplicativo tem uma tela só para esse caso, e ela manda **publicar de
 novo** em vez de só preencher.
