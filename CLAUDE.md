@@ -155,12 +155,16 @@ migração de dado de gente:
   15 contam para os próximos 30 (a fala de 19/11, *"ele tem que estar sempre juntando"*, combina com isso).
 - **Quais 3–5 parceiros começam** (o percentual é o do Clube: 10% no Prime, 15%+ no de Ofertas).
 
-## O que falta para alguém usar
+## O que falta para alguém usar (corrigido em 19/11, pela passagem da conversa "Cashback prime")
 
-1. ~~A **tela do balcão**~~: feita em 08/11 (`balcao.html`, "ler a carteirinha, lançar o cashback, cobrar"); falta usar com um
-   parceiro de verdade.
-2. O **projeto da Vercel** deste repositório (Root Directory = a raiz).
-3. O **item de menu no Clube Prime**, com o repasse de `/cashback` — e ele precisa ser
-   **mesma origem**, senão a sessão do login não atravessa (`localStorage` é por origem).
-   ⚠️ No `drrodrigo/clubeprime`, a barra de baixo do celular (`CascaLateral.tsx`) ignora o
-   `externo` do item de menu: um item externo fica morto no celular. Conserte junto.
+> A passagem inteira da conversa antiga: [`docs/2026-11-19-passagem-do-cashback-prime.md`](docs/2026-11-19-passagem-do-cashback-prime.md).
+
+1. ~~A tela do balcão~~: feita em 08/11 (`balcao.html`).
+2. ~~O projeto da Vercel~~: **existe desde 08/11**, `cashback`, https://cashback-snowy.vercel.app (com as `VITE_`; em 19/11
+   mostra "Troco Prime"). O domínio **trocoprime.com.br** ainda não aponta para ele (pôr no ar: só com o OK dele).
+3. O item "Meu cashback" no Clube Prime: **feito e mesclado** (`drrodrigo/clubeprime` #104, 08/11), **não publicado**
+   (esperando "publica o clube"). Agora que a porta é o QR Bio, decidir se ele continua, e se passa a dizer "Troco Prime".
+4. **A porta no QR Bio** (19/11): as regras por sócio (`0017`) e a ponte `qrbio_troco_*` (`drrodrigo/qrbio.me`), prontas e
+   testadas, esperando o OK dele para subir.
+5. A tela do administrador, o aviso de vencimento (7 e 2 dias) e o vencimento automático: não existem.
+6. O primeiro parceiro de verdade (zero loja, zero cliente em 19/11).
