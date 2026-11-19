@@ -111,6 +111,16 @@ migração de dado de gente:
 - **Ponto = R$ 1**, e se fala **"pontos"** (na voz dele: *"seria em pontos"*). Dois saldos: o que **junta** (travado) e o
   que **libera** para gastar, a partir de **30** (pode esperar 40, 50), em qualquer loja da rede; depois volta a juntar. É
   a regra que o motor já tem.
+- **O parceiro pode dar MAIS pontos além do desconto** (caminho, ainda em desenho; na voz dele: *"eu dou 10% mais 5 (...)
+  todo produto que você comprar aqui, você tem, além do 10%, você tem ainda mais 5 (...) ou mais 10 (...) a gente tem que
+  ir bolando isso aí, porque isso ainda não está muito bem estruturado não, mas esse é o caminho"*). Ou seja, duas formas
+  de o parceiro premiar:
+  - o desconto do Clube **vira pontos** (paga 100, ganha 10 ou 20);
+  - **ou dá o desconto E pontos a mais**, fixos por produto ou por compra (10% + 5 pontos).
+
+  O motor hoje só tem o percentual da loja. "Pontos fixos por produto" é regra nova: desenhar com ele antes de programar.
+  O §5 do desenho já tem uma parente ("cashback em dobro na loja") e o terceiro saldo do §1 (o extra que só vale naquela
+  loja).
 - **A porta do cliente é o QR Bio** (a captação do Clube): a conta do cashback aparece ao lado da carteirinha. A escada
   inteira (QR Bio → QR Único → Catálogo) está em `drrodrigo/qrbio`, `docs/2026-11-19-a-escada.md`.
 - **O nome:** "QR Cash" ele achou registrado; ele pensou em **"QR Coin"**, e pediu para ver a legalidade.
@@ -131,7 +141,8 @@ migração de dado de gente:
 
 ## O que falta para alguém usar
 
-1. A **tela do balcão** (hoje só a do cliente existe).
+1. ~~A **tela do balcão**~~: feita em 08/11 (`balcao.html`, "ler a carteirinha, lançar o cashback, cobrar"); falta usar com um
+   parceiro de verdade.
 2. O **projeto da Vercel** deste repositório (Root Directory = a raiz).
 3. O **item de menu no Clube Prime**, com o repasse de `/cashback` — e ele precisa ser
    **mesma origem**, senão a sessão do login não atravessa (`localStorage` é por origem).
