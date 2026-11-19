@@ -1,4 +1,4 @@
--- AS REGRAS "POR SÓCIO" (0017, 19/11/2026): a mesma conta, pelo login do Clube OU pela ponte do QR Bio.
+-- AS REGRAS "POR SÓCIO" (0019, 19/11/2026): a mesma conta, pelo login do Clube OU pela ponte do QR Bio.
 --
 -- O que este teste mede, e por quê:
 --   1. a gaveta continua fechada: as internas `cash.*_do_membro` não abrem para anon nem para authenticated;

@@ -1,6 +1,8 @@
 -- ---------------------------------------------------------------------------
 -- Cash -- as regras do cliente "por sócio", para o QR Bio abrir a conta (19/11/2026).
 --
+-- Na produção: `cash_0019_as_regras_por_socio` (os nomes 0017 e 0018 já existiam lá, de 08/11).
+--
 -- POR QUÊ. Ele decidiu em 19/11 que a porta do cliente é o QR Bio: a conta do Troco Prime aparece ao lado da
 -- carteirinha do Clube, no painel e no app do QR Bio. Só que as funções do cliente (`public.cash_*`) achavam a
 -- pessoa por `auth.uid()`, o login do Supabase do Clube, e o QR Bio tem login PRÓPRIO (a sessão em
