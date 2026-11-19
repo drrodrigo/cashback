@@ -105,7 +105,20 @@ describe('quem é do Clube e ainda não ativou', () => {
       lojas: [{ loja_id: 'l1', nome: 'Joalheria Sol', cashback_percentual: 10, cidade: 'Lagoa Santa', uf: 'MG', catalogo_slug: null, clube_parceiro_id: 'p1' }],
     })
     expect(texto(t)).toContain('Joalheria Sol')
-    expect(texto(t)).toContain('10% de volta')
+    expect(texto(t)).toContain('10% de troco')
+  })
+
+  it('a loja que dá desconto no caixa E troco diz os dois, como no QR Bio (com conflito: 5 e 12)', () => {
+    const t = montar({
+      carteira: carteira({ aderiu: false }),
+      lojas: [
+        { loja_id: 'l1', nome: 'Padaria', cashback_percentual: 12, desconto_no_caixa: 5, cidade: null, uf: null, catalogo_slug: null, clube_parceiro_id: null },
+        { loja_id: 'l2', nome: 'Ótica', cashback_percentual: 7.5, desconto_no_caixa: 0, cidade: null, uf: null, catalogo_slug: null, clube_parceiro_id: null },
+      ],
+    })
+    expect(texto(t)).toContain('5% de desconto + 12% de troco')
+    expect(texto(t)).toContain('7,5% de troco')
+    expect(texto(t)).not.toContain('0% de desconto')
   })
 
   it('o botão chama a ação de ativar', () => {

@@ -40,6 +40,19 @@ export interface LojaDaRede {
   uf: string | null
   catalogo_slug: string | null
   clube_parceiro_id: string | null
+  /** O desconto no caixa da loja (0023), quando vem de `cash_lojas_da_rede_com_regras` (0024). 0 = só troco. */
+  desconto_no_caixa?: number
+}
+
+/**
+ * A regra da loja numa linha, na lista "Onde ganhar troco": "10% de troco" ou "10% de desconto + 10% de troco".
+ * É a MESMA frase que o "Onde usar" do QR Bio mostra (pedido de lá, 19/11): o cliente vê igual nas duas portas.
+ */
+export function regraNaLista(l: Pick<LojaDaRede, 'cashback_percentual' | 'desconto_no_caixa'>): string {
+  const pct = (n: number) => Number(n).toLocaleString('pt-BR', { maximumFractionDigits: 2 })
+  const d = Number(l.desconto_no_caixa) || 0
+  const troco = `${pct(l.cashback_percentual)}% de ${MARCA.moeda}`
+  return d > 0 ? `${pct(d)}% de desconto + ${troco}` : troco
 }
 
 /**

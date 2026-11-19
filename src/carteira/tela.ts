@@ -18,6 +18,7 @@ import {
   type Carteira,
   type Lancamento,
   type LojaDaRede,
+  regraNaLista,
   type CobrancaDoCliente,
 } from './estado'
 
@@ -323,7 +324,7 @@ function blocoDasLojas(lojas: LojaDaRede[]): HTMLElement {
       const onde = [l.cidade, l.uf].filter(Boolean).join(' - ')
       const li = el('li', {}, [
         el('strong', { texto: l.nome }),
-        el('span', { classe: 'ca-pct', texto: `${l.cashback_percentual}% de volta` }),
+        el('span', { classe: 'ca-pct', texto: regraNaLista(l) }),
         onde ? el('span', { classe: 'ca-dica', texto: onde }) : null,
       ])
       lista.appendChild(li)

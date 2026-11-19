@@ -347,6 +347,7 @@ export function criarDemonstracao(
           uf: m.lojas[l.id].uf,
           catalogo_slug: null,
           clube_parceiro_id: null,
+          desconto_no_caixa: m.lojas[l.id].descontoNoCaixa,
         }))
         .filter((l) => !b || semAcento(`${l.nome} ${l.cidade ?? ''} ${l.uf ?? ''}`).includes(b))
     },
