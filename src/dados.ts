@@ -63,6 +63,9 @@ const FRASES: Record<string, string> = {
   empresa_do_qrunico_nao_encontrada: 'Essa empresa não está mais ativa no QR Único.',
   loja_do_catalogo_nao_encontrada: 'Essa loja não existe mais no Catálogo Online.',
   pedido_ja_resolvido: 'Esse saque já foi resolvido por outra pessoa. A lista foi atualizada.',
+  percentual_invalido: 'O troco tem que ser mais que 0% e até 100%; o desconto no caixa, de 0% a menos de 100%.',
+  regras_passam_de_100: 'Desconto no caixa e troco juntos passam de 100%. Confira os números.',
+  loja_nao_encontrada: 'Essa loja não está mais no Troco Prime. A lista foi atualizada.',
 }
 
 /**
@@ -252,14 +255,26 @@ export async function buscarLojistas(busca: string): Promise<Achado[]> {
   return (data as Achado[] | null) ?? []
 }
 
-export async function vincularLojista(origem: Achado['origem'], origemId: string, percentual: number): Promise<void> {
-  const { error } =
+/** Vincula a loja e devolve o id dela no Troco Prime. */
+export async function vincularLojista(origem: Achado['origem'], origemId: string, percentual: number): Promise<string> {
+  const { data, error } =
     origem === 'qrunico'
       ? await cliente().rpc('cash_admin_vincular_qrunico', { p_usuario: origemId, p_cashback_percentual: percentual })
       : await cliente().rpc('cash_admin_ligar_loja_do_catalogo', {
           p_catalogo_loja_id: origemId,
           p_cashback_percentual: percentual,
         })
+  if (error) throw error
+  return String(data)
+}
+
+/** As regras da loja (19/11): % de troco e % de desconto no caixa. */
+export async function salvarRegrasDaLoja(lojaId: string, troco: number, descontoNoCaixa: number): Promise<void> {
+  const { error } = await cliente().rpc('cash_admin_regras_da_loja', {
+    p_loja: lojaId,
+    p_troco: troco,
+    p_desconto_no_caixa: descontoNoCaixa,
+  })
   if (error) throw error
 }
 

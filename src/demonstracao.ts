@@ -193,7 +193,7 @@ function painelLoja(): string {
         </div>
       </div>
       <div class="linha">
-        <label class="marcador"><input type="checkbox" id="presencial" checked> comprou na loja (vale o dobro)</label>
+        <label class="marcador"><input type="checkbox" id="presencial" checked> comprou na loja</label>
         <label class="marcador"><input type="checkbox" id="restrito"> só vale nesta loja</label>
         <button data-acao="cashback">Dar ${MARCA.moeda}</button>
       </div>

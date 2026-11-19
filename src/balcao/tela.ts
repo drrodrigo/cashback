@@ -17,6 +17,7 @@ import {
   emReais,
   fraseDoAtendimento,
   lerValor,
+  regraDaLoja,
   qualTelaDoBalcao,
   tetoDaCobranca,
   type Cliente,
@@ -183,7 +184,7 @@ function cartaoDaLoja(loja: MinhaLoja, acoes: AcoesDoBalcao, d: DadosDoBalcao): 
   const s = el('section', { classe: 'ca-cartao' })
   s.appendChild(el('h2', { texto: loja.nome }))
   s.appendChild(
-    el('p', { classe: 'ca-dica', texto: `Devolve ${loja.cashback_percentual}% em ${MARCA.moeda} a cada compra.` }),
+    el('p', { classe: 'ca-dica', texto: regraDaLoja(loja, MARCA.moeda) }),
   )
 
   const linha = el('div', { classe: 'ca-numeros' })
@@ -300,7 +301,18 @@ function cartaoDoAtendimento(
   s.appendChild(pilula)
 
   if (d.modo === 'dar') {
-    const { volta, entrada } = campo('Valor da compra', 'R$ 0,00')
+    // Loja de "desconto + troco" (19/11): o vendedor dá o desconto no caixa e digita o que o cliente PAGOU; o troco é
+    // o percentual sobre esse valor.
+    const desconto = Number(loja.desconto_no_caixa) || 0
+    if (desconto > 0) {
+      s.appendChild(
+        el('p', {
+          classe: 'ca-dica',
+          texto: `Dê os ${desconto}% de desconto no caixa e digite abaixo o valor que o cliente pagou.`,
+        }),
+      )
+    }
+    const { volta, entrada } = campo(desconto > 0 ? 'Valor pago (já com o desconto)' : 'Valor da compra', 'R$ 0,00')
     const previa = el('p', { classe: 'ca-dica', texto: ' ' })
     const lancar = el('button', { classe: 'ca-botao', texto: `Lançar o ${MARCA.moeda}` })
     lancar.disabled = true

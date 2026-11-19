@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { emPercentual, lerPercentual, ondeFica, percentualSugerido, qualTelaDoAdmin, type Painel } from './estado'
+import { emPercentual, lerDesconto, lerPercentual, ondeFica, percentualSugerido, qualTelaDoAdmin, regraEmTexto, type Painel } from './estado'
 
 const PAINEL: Painel = {
   cash_existente: 300,
@@ -69,5 +69,23 @@ describe('os textos curtos', () => {
     expect(ondeFica('Lagoa Santa', 'MG')).toBe('Lagoa Santa/MG')
     expect(ondeFica(null, 'MG')).toBe('MG')
     expect(ondeFica(null, null)).toBe('sem cidade')
+  })
+})
+
+describe('as duas formas de a loja premiar (19/11)', () => {
+  it('só troco e desconto + troco, numa frase', () => {
+    expect(regraEmTexto(20, 0)).toBe('20% de troco')
+    expect(regraEmTexto(10, 10)).toBe('10% de desconto + 10% de troco')
+  })
+  it('a soma passando de 100% não vira regra', () => {
+    expect(regraEmTexto(60, 50)).toBeNull()
+    expect(regraEmTexto(50, 50)).toBe('50% de desconto + 50% de troco')
+  })
+  it('o desconto aceita zero e vazio (só troco), recusa 100 e texto', () => {
+    expect(lerDesconto('')).toBe(0)
+    expect(lerDesconto('0')).toBe(0)
+    expect(lerDesconto('10%')).toBe(10)
+    expect(lerDesconto('100')).toBeNull()
+    expect(lerDesconto('dez')).toBeNull()
   })
 })

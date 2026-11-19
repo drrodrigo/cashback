@@ -15,6 +15,7 @@ const LOJA: MinhaLoja = {
   loja_id: 'l1',
   nome: 'Joalheria Sol',
   cashback_percentual: 10,
+  desconto_no_caixa: 0,
   credito: 1000,
   recebido: 250,
   saque_pedido: 0,
@@ -289,5 +290,24 @@ describe('as listas', () => {
 
   it('extrato vazio diz o que esperar, em vez de ficar em branco', () => {
     expect(texto(montar())).toContain('O primeiro atendimento aparece aqui')
+  })
+})
+
+describe('a loja de desconto + troco (19/11)', () => {
+  it('diz as duas coisas: o desconto no caixa e o troco', () => {
+    const t = montar({ loja: { ...LOJA, desconto_no_caixa: 10 } })
+    expect(texto(t)).toContain('Dá 10% de desconto no caixa e ainda devolve 10% em troco.')
+  })
+
+  it('ao dar troco, manda dar o desconto e digitar o valor PAGO', () => {
+    const t = montar({ loja: { ...LOJA, desconto_no_caixa: 10 }, cliente: CLIENTE, modo: 'dar' })
+    expect(texto(t)).toContain('Dê os 10% de desconto no caixa e digite abaixo o valor que o cliente pagou.')
+    expect(texto(t)).toContain('Valor pago (já com o desconto)')
+  })
+
+  it('a loja de só troco continua como antes', () => {
+    const t = montar({ loja: LOJA, cliente: CLIENTE, modo: 'dar' })
+    expect(texto(t)).toContain('Devolve 10% em troco a cada compra.')
+    expect(texto(t)).not.toContain('desconto no caixa')
   })
 })

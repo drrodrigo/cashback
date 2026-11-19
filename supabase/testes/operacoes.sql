@@ -64,12 +64,14 @@ begin
          || 'cashback de 10% em 200 move 20 do credito para o cliente' || E'\n';
   if v_ok is not true then v_falhas := v_falhas + 1; end if;
 
-  -- 4. Compra NA LOJA rende o dobro da compra pela internet. É a regra que faz o
-  --    programa trazer gente para a rua, que é o produto.
+  -- 4. SEM O DOBRO (decisão dele em 19/11, migration 0023): a compra NA LOJA rende o percentual da loja, igual à
+  --    compra pela internet. Antes rendia o dobro (40), e a tela do balcão dizia 20. O CONFLITO medido aqui é
+  --    exatamente esse: presencial = true tem que dar 20, não 40.
   perform cash.dar_cashback(v_loja, v_cli2, 200, true);
-  v_ok := cash.saldo(cash.conta_acumulo(v_cli2)) = 40;
+  v_ok := cash.saldo(cash.conta_acumulo(v_cli2)) = 20;
   r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
-         || 'a mesma compra presencial rende o dobro (40 contra 20)' || E'\n';
+         || 'a compra presencial rende o percentual da loja, sem dobro (20 em 200, veio '
+         || cash.saldo(cash.conta_acumulo(v_cli2)) || ')' || E'\n';
   if v_ok is not true then v_falhas := v_falhas + 1; end if;
 
   -- 5. IDEMPOTÊNCIA. O balcão tem sinal ruim e o vendedor toca duas vezes: a
