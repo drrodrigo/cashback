@@ -9,6 +9,7 @@
 // toque errado no celular não pode virar R$ 3.000 de troco.
 // ---------------------------------------------------------------------------
 
+import { tituloComIcone } from '../lib/marcaNaTela'
 import { MARCA } from '../marca'
 import {
   emPercentual,
@@ -89,7 +90,7 @@ function aviso(texto: string, tipo: 'erro' | 'recado' = 'erro'): HTMLElement {
 
 function cabecalho(logado: boolean, acoes: AcoesDoAdmin): HTMLElement {
   const h = el('header', { classe: 'ca-topo' })
-  h.appendChild(el('h1', { texto: `${MARCA.nome} — Administrador` }))
+  h.appendChild(tituloComIcone(`${MARCA.nome} — Administrador`))
   h.appendChild(el('p', { classe: 'ca-tagline', texto: 'Lojistas, depósitos, saques e a conferência da rede.' }))
   if (logado) {
     const sair = botao('Sair', 'ca-link')

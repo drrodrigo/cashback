@@ -1008,3 +1008,33 @@ button.ct-cartao:focus-visible {
 .ct-fechar {
   align-self: center;
 }
+
+/* --- a logo (19/11): o T com a seta laranja ------------------------------------- */
+.ca-topo h1 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.ca-icone {
+  flex: none;
+  width: 32px;
+  height: 32px;
+}
+.app-barra .ca-icone {
+  width: 30px;
+  height: 30px;
+}
+.app-logo-fundo {
+  display: flex;
+  justify-content: center;
+  margin: 0.25rem 0 0.75rem;
+  padding: 14px 18px;
+  border-radius: 16px;
+  background: #fff;
+}
+.app-logo {
+  display: block;
+  width: 224px;
+  max-width: 100%;
+  height: auto;
+}

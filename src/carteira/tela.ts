@@ -8,6 +8,7 @@
 // nenhum botão.
 // ---------------------------------------------------------------------------
 
+import { tituloComIcone } from '../lib/marcaNaTela'
 import { MARCA } from '../marca'
 import {
   dataCurta,
@@ -69,7 +70,7 @@ function el<K extends keyof HTMLElementTagNameMap>(
 
 function cabecalho(): HTMLElement {
   const h = el('header', { classe: 'ca-topo' })
-  h.appendChild(el('h1', { texto: MARCA.nome }))
+  h.appendChild(tituloComIcone(MARCA.nome))
   h.appendChild(el('p', { classe: 'ca-tagline', texto: MARCA.tagline }))
   const voltar = el('a', { classe: 'ca-voltar', texto: '← Voltar ao Clube' })
   voltar.setAttribute('href', VOLTAR_AO_CLUBE)

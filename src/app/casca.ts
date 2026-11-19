@@ -15,6 +15,7 @@
 // ---------------------------------------------------------------------------
 
 import { MARCA } from '../marca'
+import { iconeDaMarca } from '../lib/marcaNaTela'
 import type { Repositorio } from '../repositorio'
 import { montarAdmin, montarBalcao, montarConta, type BalcaoMontado, type Montada } from '../telas/montar'
 import {
@@ -95,6 +96,7 @@ export function montarCasca(raiz: HTMLElement, opcoes: OpcoesDaCasca): Casca {
       voltar.setAttribute('aria-label', 'Voltar')
       b.appendChild(voltar)
     }
+    if (rota === 'inicio') b.appendChild(iconeDaMarca(30))
     b.appendChild(el('h1', { texto: TITULOS[rota] }))
     return b
   }
@@ -134,6 +136,13 @@ export function montarCasca(raiz: HTMLElement, opcoes: OpcoesDaCasca): Casca {
   // --- a entrada: as três portas -----------------------------------------------------
   function inicio(): HTMLElement {
     const s = el('section', { classe: 'app-inicio' })
+    // A logo inteira (o T com a seta e o nome), num cartão branco: fica igual no tema claro e no escuro.
+    const logo = el('img', { classe: 'app-logo' })
+    logo.src = MARCA.logo
+    logo.alt = MARCA.nome
+    logo.width = 224
+    logo.height = 121
+    s.appendChild(el('div', { classe: 'app-logo-fundo' }, [logo]))
     s.appendChild(el('p', { classe: 'app-lema', texto: MARCA.tagline }))
     const porta = (rota: Papel, titulo: string, sobre: string) => {
       const b = botao('', 'app-porta', () => ir(rota))
