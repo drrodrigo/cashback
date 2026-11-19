@@ -808,3 +808,203 @@ button.discreto:hover { background: var(--surface-2); color: var(--ink); }
 .app-tela .ca-voltar {
   display: none;
 }
+
+/* --- a carteirinha do Clube no aplicativo (19/11) ------------------------------
+   O cartão é o do Clube (escuro, com o laranja do Clube), sempre igual no claro e no escuro: é o que a loja reconhece.
+   A folha sobe de baixo, como quem puxa a carteirinha do bolso. O QR fica SEMPRE em fundo branco: câmera de balcão lê
+   mal QR claro em fundo escuro. */
+.ct-bloco {
+  max-width: 34rem;
+  margin: 0.75rem auto 1rem;
+  padding: 0 1rem;
+}
+.ct-cartao {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'marca selo'
+    'chip .'
+    'numero numero'
+    'titular validade';
+  align-content: space-between;
+  gap: 8px 12px;
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 1.586;
+  margin: 0 auto;
+  padding: 18px 20px;
+  border: 0;
+  border-radius: 16px;
+  text-align: left;
+  color: #fff;
+  font-family: var(--ui);
+  font-weight: 400;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+/* O `button:hover` geral da casa pinta de verde: o cartão não muda de cor sob o dedo. */
+.ct-cartao,
+button.ct-cartao:hover {
+  background:
+    radial-gradient(120% 140% at 100% 0%, rgba(234, 88, 12, 0.55) 0%, transparent 55%),
+    linear-gradient(135deg, #1f1b18 0%, #0d0c0b 100%);
+}
+button.ct-cartao {
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+button.ct-cartao:active {
+  transform: scale(0.98);
+}
+button.ct-cartao:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+.ct-desligada {
+  filter: grayscale(1);
+  opacity: 0.7;
+}
+.ct-marca {
+  grid-area: marca;
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.14em;
+  color: #fb923c;
+}
+.ct-selo {
+  grid-area: selo;
+  justify-self: end;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fb923c;
+  color: #1f1b18;
+}
+.ct-chip {
+  grid-area: chip;
+  width: 40px;
+  height: 30px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #f5d27a, #b8913a);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+.ct-numero {
+  grid-area: numero;
+  font-family: var(--mono);
+  font-size: clamp(1.1rem, 5.6vw, 1.45rem);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.ct-titular {
+  grid-area: titular;
+  min-width: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ct-validade {
+  grid-area: validade;
+  justify-self: end;
+  font-size: 0.75rem;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+.ct-ensina {
+  text-align: center;
+  margin: 0.5rem 0 0;
+}
+
+.ct-fundo {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.ct-fundo.ct-aberta {
+  opacity: 1;
+}
+.ct-folha {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 41;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: min(440px, 100%);
+  max-height: 100dvh;
+  overflow-y: auto;
+  padding: 0 16px 20px;
+  border-radius: 18px 18px 0 0;
+  background: var(--ground);
+  transform: translate(-50%, 100%);
+  transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.ct-folha.ct-aberta {
+  transform: translate(-50%, 0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ct-folha,
+  .ct-fundo {
+    transition: none;
+  }
+}
+.ct-barra {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 52px;
+  margin: 0 -16px;
+  padding: 0.4rem 0.75rem;
+  border-radius: 18px 18px 0 0;
+  background: var(--cash, var(--accent));
+  color: #fff;
+}
+.ct-barra h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.ct-mostre {
+  margin: 0.25rem 0 0;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+.ct-qr {
+  align-self: center;
+  width: min(260px, 72vw);
+  aspect-ratio: 1;
+  padding: 10px;
+  border-radius: 12px;
+  background: #fff;
+}
+.ct-qr svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.ct-relogio {
+  margin: 0;
+  text-align: center;
+  font-family: var(--mono);
+  color: var(--muted);
+}
+.ct-relogio.ct-erro {
+  font-family: var(--ui);
+  color: var(--erro);
+}
+.ct-dica-demo {
+  border-left: 3px solid var(--cash, var(--accent));
+  padding-left: 0.6rem;
+}
+.ct-fechar {
+  align-self: center;
+}

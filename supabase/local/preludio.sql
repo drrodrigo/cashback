@@ -257,6 +257,57 @@ begin
   return v_token;
 end $$;
 
+-- As duas funções FECHADAS do Clube que o QR Bio usa e que a `0025` passou a usar (a carteirinha no app do Troco
+-- Prime). Copiadas da função viva (`pg_get_functiondef`, 19/11), letra por letra no que o cash depende: a recusa da
+-- carteirinha inativa, o token de 90 s e o `null` para quem não é do Clube.
+alter table clube.perfis add column if not exists criado_em timestamptz not null default now();
+alter table clube.perfis add column if not exists cadastrado_por_id uuid;
+
+create or replace function clube.carteirinha_de(p_membro uuid) returns jsonb
+language sql stable security definer
+set search_path to 'clube', 'public', 'pg_temp'
+as $$
+  select jsonb_build_object(
+           'nome', pf.nome,
+           'nivel', pf.nivel,
+           'prime_ate', pf.prime_ate,
+           'prime_em_dia', coalesce(pf.nivel = 'prime' and pf.prime_ate >= current_date, false),
+           'membro_desde', pf.criado_em,
+           'codigo_publico', c.codigo_publico,
+           'ativa', c.ativa,
+           'loja', (select jsonb_build_object('nome', p.nome, 'slug', p.slug)
+                      from clube.parceiros p where p.id = pf.cadastrado_por_id))
+    from clube.perfis pf
+    join clube.carteirinhas c on c.membro_id = pf.id
+   where pf.id = p_membro;
+$$;
+
+create or replace function clube.emitir_token_de(p_membro uuid)
+returns table(token text, expira_em timestamptz)
+language plpgsql security definer
+set search_path to 'clube', 'public', 'pg_temp'
+as $$
+declare
+  v_ativa boolean;
+begin
+  select c.ativa into v_ativa from clube.carteirinhas c where c.membro_id = p_membro;
+  if v_ativa is null then
+    raise exception 'carteirinha não encontrada' using hint = 'sem_carteirinha';
+  elsif not v_ativa then
+    raise exception 'carteirinha inativa' using hint = 'carteirinha_inativa';
+  end if;
+
+  delete from clube.carteirinha_tokens t
+   where t.membro_id = p_membro and t.expira_em < now() - interval '5 minutes';
+
+  return query
+    insert into clube.carteirinha_tokens (membro_id)
+    values (p_membro)
+    returning carteirinha_tokens.token, carteirinha_tokens.expira_em;
+end $$;
+revoke all on function clube.carteirinha_de(uuid) from public, anon, authenticated;
+revoke all on function clube.emitir_token_de(uuid) from public, anon, authenticated;
+
 -- 🔴 A GAVETA DO CLUBE ESTÁ ABERTA, e isto é cópia fiel da produção, não descuido
 -- do dublê. Medido em 04/10:
 --

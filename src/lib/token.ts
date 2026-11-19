@@ -47,3 +47,13 @@ export function extrairToken(lido: string): string | null {
   const token = bruto.toLowerCase()
   return TOKEN.test(token) ? token : null
 }
+
+/**
+ * O endereço que vai DENTRO do QR que o Troco Prime mostra (0025, 19/11): o MESMO que o Clube e o QR Bio escrevem,
+ * para qualquer balcão (o do Clube, o do Troco Prime, a câmera comum) ler igual. `extrairToken` desfaz.
+ */
+export const ENDERECO_DE_VALIDAR = 'https://www.clubeprime.com.br/validar'
+
+export function enderecoDoQr(token: string): string {
+  return `${ENDERECO_DE_VALIDAR}#${token}`
+}

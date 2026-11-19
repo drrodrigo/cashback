@@ -40,6 +40,7 @@ import {
   type Estado,
 } from '../nucleo/livro'
 import type { Carteira, CobrancaDoCliente, Lancamento, LojaDaRede } from '../carteira/estado'
+import type { CarteirinhaDoClube, QrDaCarteirinha } from '../carteirinha/estado'
 import type { Cliente, Cobranca, MinhaLoja } from '../balcao/estado'
 import type { Achado, LojaAdmin, Origem, Painel, SaquePedido } from '../admin/estado'
 import type { Repositorio } from '../repositorio'
@@ -61,6 +62,18 @@ export const SENHA_DE_TESTE = '123456'
 export const CARTEIRINHAS_DE_TESTE: Record<string, string> = {
   ana: 'a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0',
   bruno: 'b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0',
+}
+
+/** O cartão de cada cliente de teste (o número tem 10 letras, como no Clube). A Ana é do Clube; o Bruno é Prime. */
+export const CARTOES_DE_TESTE: Record<string, CarteirinhaDoClube> = {
+  ana: {
+    nome: 'Ana Souza', codigo_publico: 'CPANA00001', nivel: 'clube', prime_ate: null, prime_em_dia: false,
+    membro_desde: '2026-09-02T12:00:00Z', ativa: true,
+  },
+  bruno: {
+    nome: 'Bruno Lima', codigo_publico: 'CPBRU00002', nivel: 'prime', prime_ate: '2027-06-30', prime_em_dia: true,
+    membro_desde: '2026-03-15T12:00:00Z', ativa: true,
+  },
 }
 
 interface LojaExtra {
@@ -368,6 +381,17 @@ export function criarDemonstracao(
           valor_em_cash: p.valorEmCash,
           criado_em: p.criadoEm,
         }))
+    },
+    async minhaCarteirinha(): Promise<CarteirinhaDoClube | null> {
+      const c = clienteDaConta()
+      return c ? { ...CARTOES_DE_TESTE[c.id] } : null
+    },
+    async qrDaCarteirinha(): Promise<QrDaCarteirinha> {
+      precisaEntrar()
+      const c = clienteDaConta()
+      if (!c) throw erroDoBanco('precisa_ser_do_clube')
+      // Na demonstração o token é fixo (o balcão do /beta lê pelo atalho); o relógio de 90 s é o de verdade.
+      return { token: CARTEIRINHAS_DE_TESTE[c.id], expira_em: new Date(Date.now() + 90_000).toISOString() }
     },
     async confirmarCobranca(id) {
       const c = precisaEntrar()

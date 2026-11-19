@@ -21,6 +21,8 @@ import {
   regraNaLista,
   type CobrancaDoCliente,
 } from './estado'
+import type { CarteirinhaDoClube } from '../carteirinha/estado'
+import { blocoDaCarteirinha } from '../carteirinha/tela'
 
 export interface Acoes {
   entrar(email: string, senha: string): Promise<void>
@@ -29,6 +31,8 @@ export interface Acoes {
   sair(): Promise<void>
   /** Confirma a cobrança que a loja pediu no balcão (19/11). */
   confirmar?(cobrancaId: string): Promise<void>
+  /** Abre a folha com o QR da carteirinha (19/11). */
+  mostrarCarteirinha?(): void
 }
 
 export interface Dados {
@@ -40,6 +44,8 @@ export interface Dados {
   extrato: Lancamento[]
   /** As cobranças de loja esperando ela confirmar (19/11). */
   cobrancas?: CobrancaDoCliente[]
+  /** A carteirinha do Clube, que aparece no alto da conta e abre o QR num toque (19/11). */
+  carteirinha?: CarteirinhaDoClube | null
   /** Mensagem de erro para mostrar, se a última ação falhou. */
   erro: string | null
   ocupado: boolean
@@ -380,6 +386,12 @@ export function desenhar(onde: HTMLElement, d: Dados, acoes: Acoes): void {
     onde.appendChild(telaForaDoClube())
     return
   }
+  // A CARTEIRINHA NO ALTO, antes do saldo: é o que a pessoa mostra no balcão (19/11).
+  if (d.carteirinha && acoes.mostrarCarteirinha) {
+    const abrir = acoes.mostrarCarteirinha
+    onde.appendChild(blocoDaCarteirinha(d.carteirinha, () => abrir()))
+  }
+
   if (tela.qual === 'ativar') {
     onde.appendChild(telaAtivar(acoes, d))
     onde.appendChild(blocoDasLojas(d.lojas))

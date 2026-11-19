@@ -14,6 +14,7 @@ import { desenharAdmin, type AcoesDoAdmin, type DadosDoAdmin } from '../admin/te
 import { emReais, regraEmTexto } from '../admin/estado'
 import { extrairToken } from '../lib/token'
 import { ligarCamera, type EstadoDaCamera, type Leitor } from '../balcao/leitorQr'
+import { abrirFolhaDoQr, type Folha } from '../carteirinha/tela'
 
 /** O que a montagem devolve: repintar quando os dados mudarem por fora, e desmontar ao sair da tela. */
 export interface Montada {
@@ -23,7 +24,13 @@ export interface Montada {
 
 // --- a conta do cliente ------------------------------------------------------------
 
-export function montarConta(onde: HTMLElement, repo: Repositorio): Montada {
+export interface OpcoesDaConta {
+  /** Uma linha a mais na folha do QR (a demonstração explica como a loja lê sem câmera). */
+  dicaDaCarteirinha?: (nome: string) => string
+}
+
+export function montarConta(onde: HTMLElement, repo: Repositorio, opcoes: OpcoesDaConta = {}): Montada {
+  let folha: Folha | null = null
   const dados: Dados = {
     faltaConfigurar: repo.faltaConfigurar,
     logado: false,
@@ -40,12 +47,14 @@ export function montarConta(onde: HTMLElement, repo: Repositorio): Montada {
     dados.logado = await repo.estaLogado()
     if (!dados.logado) {
       dados.carteira = null
+      dados.carteirinha = null
       // AS LOJAS APARECEM ANTES DO LOGIN, de propósito: quem chegou sem conta precisa ver onde ganharia antes de
       // decidir entrar.
       dados.lojas = await repo.lerLojas().catch(() => [])
       return
     }
     dados.carteira = await repo.lerCarteira()
+    dados.carteirinha = dados.carteira?.e_do_clube ? await repo.minhaCarteirinha().catch(() => null) : null
     dados.lojas = await repo.lerLojas().catch(() => [])
     dados.extrato = dados.carteira?.aderiu ? await repo.lerExtrato().catch(() => []) : []
     dados.cobrancas = dados.carteira?.aderiu ? await repo.lerMinhasCobrancas().catch(() => []) : []
@@ -72,10 +81,25 @@ export function montarConta(onde: HTMLElement, repo: Repositorio): Montada {
     ativar: () => tentar(() => repo.ativar()),
     transferir: (valor) => tentar(() => repo.transferir(valor)),
     confirmar: (id) => tentar(() => repo.confirmarCobranca(id)),
+    mostrarCarteirinha: () => {
+      const c = dados.carteirinha
+      if (!c || !c.ativa || folha) return
+      folha = abrirFolhaDoQr({
+        carteirinha: c,
+        pedirQr: () => repo.qrDaCarteirinha(),
+        fraseDoErro: (e) => repo.fraseDoErro(e),
+        dica: opcoes.dicaDaCarteirinha?.(c.nome),
+        aoFechar: () => {
+          folha = null
+        },
+      })
+    },
     sair: () =>
       tentar(async () => {
         await repo.sair()
+        folha?.fechar()
         dados.carteira = null
+        dados.carteirinha = null
         dados.extrato = []
         dados.cobrancas = []
       }),
@@ -92,7 +116,13 @@ export function montarConta(onde: HTMLElement, repo: Repositorio): Montada {
     pintar()
   }
   void recarregar()
-  return { recarregar, desmontar: () => onde.replaceChildren() }
+  return {
+    recarregar,
+    desmontar: () => {
+      folha?.fechar()
+      onde.replaceChildren()
+    },
+  }
 }
 
 // --- o balcão da loja --------------------------------------------------------------

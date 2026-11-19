@@ -65,7 +65,7 @@ deu o crédito.
 
 ## O estado, e como conferir (não acredite neste arquivo)
 
-O banco está **no ar** desde 08/11: a gaveta `cash` e as funções da fronteira (32 em 19/11, contadas no banco vivo)
+O banco está **no ar** desde 08/11: a gaveta `cash` e as funções da fronteira (34 em 19/11, contadas no banco vivo)
 (`public.cash_*`). O que exatamente subiu, o nome de cada migration na produção e **o SQL da
 conferência** estão em [`supabase/APLICADO-NA-PRODUCAO.md`](supabase/APLICADO-NA-PRODUCAO.md).
 
@@ -78,12 +78,12 @@ arquivos na ordem e a produção não tinha a mesma ordem.
 
 ```bash
 npm install                 # na 1a vez precisa de --legacy-peer-deps (ver vitest.config.ts)
-npm test                    # 195 testes (o motor, as telas, o /app e o /beta, a demonstração, a trava do nome e a das frases)
+npm test                    # 204 testes (o motor, as telas, o /app e o /beta, a carteirinha, a demonstração, as travas)
 npm run build               # com as VITE_*; sem elas o `assets/dados-*.js` sai com 2,8 kB
                             # em vez de 219 kB (olhe ESSE arquivo, não o index-*.js)
 npm run dev
 
-bash scripts/banco-de-mentira.sh --testes   # 127 passos num Postgres descartável, de graça
+bash scripts/banco-de-mentira.sh --testes   # 137 passos num Postgres descartável, de graça
 ```
 
 ## O banco é COMPARTILHADO, e isso tem regras
@@ -261,5 +261,13 @@ você vai me mostrando e eu vou testando e vou te falando o que mudar"*.
   `criarDemonstracao(papel)`. Tela nova fala com o `Repositorio`, nunca direto com o `dados.ts`, senão some do `/beta`.
 - **Regra que mora em dois lugares**: a demonstração imita as travas do banco. Mudou uma regra de dinheiro no banco, muda
   no motor (`livro.ts`) e o teste da demonstração (`src/demonstracao/repositorio.test.ts`) tem de continuar verde.
+- **A carteirinha do Clube no aplicativo (19/11, `0025`).** Ele: *"Carteirinha, número tal, ela clica, aí a carteirinha
+  aparece (...) com o QR Code para fazer a transferência do troco"*. No alto da conta: o cartão (número em grupos de 4,
+  titular, "Prime até" ou "Desde"). Tocar sobe a **folha** (`src/carteirinha/tela.ts`) com o QR de 90 s que o balcão lê
+  (o MESMO endereço do Clube, `https://www.clubeprime.com.br/validar#<token>`, `enderecoDoQr` em `src/lib/token.ts`). O
+  QR se renova sozinho 30 s antes de vencer, só com a folha aberta e a tela à vista; a folha tem a setinha, e o "voltar"
+  do celular fecha a folha. Banco: `public.cash_minha_carteirinha()` e `public.cash_qr_da_carteirinha()`, portas para as
+  funções FECHADAS do Clube (`clube.carteirinha_de`, `clube.emitir_token_de`), como o QR Bio faz; nada do Clube se copia.
+  No `/beta`, o QR leva o token de teste e a folha explica que a loja lê pelo atalho.
 - **Todo código de erro do banco tem frase** em `FRASES` (`src/dados.ts`): a trava `src/frasesDoBanco.test.ts` lê cada
   `raise exception` das migrations e reprova o código que chegaria cru na tela (falsificada).

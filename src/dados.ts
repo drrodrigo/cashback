@@ -21,6 +21,7 @@ import { createClient } from '@supabase/supabase-js'
 import type { Carteira, CobrancaDoCliente, Lancamento, LojaDaRede } from './carteira/estado'
 import type { Cliente, Cobranca, MinhaLoja } from './balcao/estado'
 import type { Achado, LojaAdmin, Painel, SaquePedido } from './admin/estado'
+import type { CarteirinhaDoClube, QrDaCarteirinha } from './carteirinha/estado'
 import { MARCA } from './marca'
 
 // `.trim()` porque copiar-e-colar em painel de deploy quase sempre traz um
@@ -349,4 +350,26 @@ export async function vencerAgora(): Promise<number> {
   const { data, error } = await cliente().rpc('cash_admin_vencer')
   if (error) throw error
   return Number(data ?? 0)
+}
+
+/**
+ * A carteirinha do Clube de quem está logado (0025), para o Troco Prime mostrar. Quem não é do Clube não tem: `null`,
+ * e a tela simplesmente não desenha o cartão.
+ */
+export async function lerMinhaCarteirinha(): Promise<CarteirinhaDoClube | null> {
+  const { data, error } = await cliente().rpc('cash_minha_carteirinha')
+  if (error) {
+    if (`${error.message ?? ''}`.includes('precisa_ser_do_clube')) return null
+    throw error
+  }
+  return (data as CarteirinhaDoClube[] | null)?.[0] ?? null
+}
+
+/** O QR de 90 segundos da carteirinha (0025). Cada chamada é um token novo, de uso único. */
+export async function pedirQrDaCarteirinha(): Promise<QrDaCarteirinha> {
+  const { data, error } = await cliente().rpc('cash_qr_da_carteirinha')
+  if (error) throw error
+  const linha = (data as QrDaCarteirinha[] | null)?.[0]
+  if (!linha) throw new Error('precisa_ser_do_clube')
+  return linha
 }

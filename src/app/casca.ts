@@ -27,9 +27,6 @@ import {
 
 export type Rota = 'inicio' | Papel
 
-/** Onde a pessoa mostra a carteirinha do Clube de verdade: no QR Bio (decisão de 19/11, a porta do cliente). */
-export const CARTEIRINHA_NO_QR_BIO = 'https://www.qrbio.com.br/painel?aba=clube'
-
 export interface OpcoesDaCasca {
   modo: 'banco' | 'demonstracao'
   /** Um repositório por papel. No banco são o mesmo; na demonstração, cada papel tem o seu login. */
@@ -187,31 +184,6 @@ export function montarCasca(raiz: HTMLElement, opcoes: OpcoesDaCasca): Casca {
     return s
   }
 
-  function carteirinha(): HTMLElement {
-    const s = el('section', { classe: 'app-carteirinha' })
-    if (!demo) {
-      s.appendChild(el('p', { texto: 'No balcão, mostre a carteirinha do Clube Prime. Ela fica no QR Bio.' }))
-      const a = el('a', { classe: 'app-link', texto: 'Abrir a minha carteirinha no QR Bio' })
-      a.setAttribute('href', CARTEIRINHA_NO_QR_BIO)
-      a.setAttribute('target', '_blank')
-      a.setAttribute('rel', 'noopener')
-      s.appendChild(a)
-      return s
-    }
-    const atual = (opcoes.repos.cliente as Demonstracao).contaAtual()
-    const codigo = atual ? CARTEIRINHAS_DE_TESTE[atual.id] : undefined
-    if (!codigo) return el('div')
-    s.appendChild(el('h2', { texto: `A carteirinha de ${atual!.nome}` }))
-    s.appendChild(
-      el('p', {
-        classe: 'app-dica',
-        texto: `Na demonstração, a loja lê esta carteirinha tocando em "Ler a carteirinha de ${atual!.nome.split(' ')[0]}" no balcão. No Clube de verdade, o QR muda a cada 90 segundos.`,
-      }),
-    )
-    s.appendChild(el('code', { classe: 'app-codigo', texto: codigo }))
-    return s
-  }
-
   function atalhosDoBalcao(b: BalcaoMontado): HTMLElement | null {
     if (!demo) return null
     const s = el('section', { classe: 'app-contas' })
@@ -247,12 +219,19 @@ export function montarCasca(raiz: HTMLElement, opcoes: OpcoesDaCasca): Casca {
     }
     const contas = contasDeTeste(rota)
     if (contas) coluna.appendChild(contas)
-    if (rota === 'cliente') coluna.appendChild(carteirinha())
 
     const tela = el('div', { classe: 'app-tela' })
     coluna.appendChild(tela)
     const repo = opcoes.repos[rota]
-    if (rota === 'cliente') montada = montarConta(tela, repo)
+    // A carteirinha mora na própria conta (19/11): o cartão no alto e, num toque, a folha com o QR que a loja lê.
+    if (rota === 'cliente') {
+      montada = montarConta(tela, repo, {
+        dicaDaCarteirinha: demo
+          ? (nome) =>
+              `Na demonstração, a loja lê esta carteirinha tocando em "Ler a carteirinha de ${nome.split(' ')[0]}" no balcão (os dados ficam só neste aparelho). No Clube de verdade, a câmera do balcão lê este QR.`
+          : undefined,
+      })
+    }
     if (rota === 'admin') montada = montarAdmin(tela, repo)
     if (rota === 'loja') {
       const b = montarBalcao(tela, repo, { semCamera: demo })
