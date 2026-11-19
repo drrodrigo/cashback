@@ -646,3 +646,165 @@ button.discreto:hover { background: var(--surface-2); color: var(--ink); }
 .ca-confirmar {
   border: 2px solid var(--cash);
 }
+
+/* --- a casca do aplicativo: /app e /beta (19/11) ----------------------------
+   Desenho de aplicativo, não de site: a barra de cima com a setinha de voltar em toda tela (regra dele, 18/11), as
+   portas grandes na entrada e, no computador, uma coluna de celular no meio. */
+.app-casca {
+  min-height: 100vh;
+  background: var(--surface-2);
+}
+.app-coluna {
+  max-width: 440px;
+  min-height: 100vh;
+  margin: 0 auto;
+  background: var(--ground);
+  padding-bottom: 2rem;
+}
+@media (min-width: 520px) {
+  .app-coluna {
+    box-shadow: 0 0 0 1px var(--line);
+  }
+}
+.app-barra {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 52px;
+  padding: 0.4rem 0.75rem;
+  background: var(--cash);
+  color: #fff;
+}
+.app-barra h1 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.app-seta {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.app-seta:focus-visible,
+.app-porta:focus-visible,
+.app-conta:focus-visible,
+.app-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.app-faixa-demo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+  padding: 0.5rem 0.9rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.app-faixa-demo p {
+  margin: 0;
+}
+.app-faixa-acoes {
+  display: flex;
+  gap: 0.75rem;
+}
+.app-inicio,
+.app-contas,
+.app-carteirinha {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0.9rem;
+}
+.app-contas,
+.app-carteirinha {
+  padding: 0.9rem;
+  border: 1px dashed var(--cash);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.app-contas h2,
+.app-carteirinha h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+.app-contas p,
+.app-carteirinha p {
+  margin: 0;
+}
+.app-lema {
+  margin: 0.4rem 0 0.2rem;
+  color: var(--muted);
+}
+.app-porta,
+.app-conta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.app-porta strong {
+  font-size: 1.05rem;
+  color: var(--cash);
+}
+.app-conta strong {
+  color: var(--cash);
+}
+.app-porta span,
+.app-conta span {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.app-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--cash);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.app-dica {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.app-codigo {
+  display: block;
+  padding: 0.5rem;
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+.app-tela {
+  margin: 0 0.25rem;
+}
+/* Dentro do aplicativo, a barra de cima já diz onde a pessoa está e tem a setinha: o título e o "voltar ao Clube" do
+   site saem; o resto da cabeça da tela (a loja do balcão, o "Sair") fica. */
+.app-tela .ca-topo h1,
+.app-tela .ca-voltar {
+  display: none;
+}

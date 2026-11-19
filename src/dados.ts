@@ -18,7 +18,7 @@
 // ---------------------------------------------------------------------------
 
 import { createClient } from '@supabase/supabase-js'
-import type { Carteira, Lancamento, LojaDaRede } from './carteira/estado'
+import type { Carteira, CobrancaDoCliente, Lancamento, LojaDaRede } from './carteira/estado'
 import type { Cliente, Cobranca, MinhaLoja } from './balcao/estado'
 import type { Achado, LojaAdmin, Painel, SaquePedido } from './admin/estado'
 import { MARCA } from './marca'
@@ -59,6 +59,8 @@ const FRASES: Record<string, string> = {
   abaixo_do_minimo: 'A transferência tem um mínimo. Transfira pelo menos o valor indicado.',
   saldo_insuficiente: 'Você não tem esse valor juntado.',
   valor_invalido: 'Esse valor não serve.',
+  cobranca_nao_encontrada: 'Essa cobrança já foi confirmada ou cancelada. A lista foi atualizada.',
+  cash_passa_da_compra: 'O troco não pode passar do valor da compra.',
   so_admin: 'Esta conta não é de administrador.',
   empresa_do_qrunico_nao_encontrada: 'Essa empresa não está mais ativa no QR Único.',
   loja_do_catalogo_nao_encontrada: 'Essa loja não existe mais no Catálogo Online.',
@@ -66,6 +68,24 @@ const FRASES: Record<string, string> = {
   percentual_invalido: 'O troco tem que ser mais que 0% e até 100%; o desconto no caixa, de 0% a menos de 100%.',
   regras_passam_de_100: 'Desconto no caixa e troco juntos passam de 100%. Confira os números.',
   loja_nao_encontrada: 'Essa loja não está mais no Troco Prime. A lista foi atualizada.',
+  // O balcão (19/11): até aqui estes chegavam crus na tela ("membro_nao_ativou").
+  membro_nao_ativou: `Esse cliente ainda não ativou o ${MARCA.nome}. É um toque na conta dele, na parte do Clube Prime do QR Bio.`,
+  nao_e_lojista: `Esta conta não é de uma loja do ${MARCA.nome}. Entre com o e-mail da loja.`,
+  loja_sem_carteirinha: `Esta loja ainda não lê a carteirinha do Clube Prime. Fale com a administração do ${MARCA.nome}.`,
+  loja_inativa: `Esta loja está desligada no ${MARCA.nome}. Fale com a administração.`,
+  cliente_nao_encontrado: 'Esse cliente não foi encontrado. Leia a carteirinha de novo.',
+  cashback_zero: `Com esse valor, o ${MARCA.moeda} dá zero. Confira o valor da compra.`,
+  fundo_insuficiente: 'O fundo da rede não tem esse valor. É preciso depositar antes.',
+  pedido_nao_encontrado: 'Esse pedido de saque não existe mais. A lista foi atualizada.',
+  nao_e_do_clube: 'Essa pessoa não é do Clube Prime.',
+  parceiro_nao_encontrado: 'Esse parceiro não existe mais no Clube Prime.',
+  telefone_invalido: 'O telefone precisa ter DDD e número.',
+  invariante_quebrada: 'A conta da rede não fechou, e nada foi lançado. Avise a administração.',
+  // Os do Clube, que vêm na DICA de `clube.ler_carteirinha`.
+  token_expirado: 'Esse QR já venceu ou já foi usado. Peça para o cliente abrir a carteirinha de novo.',
+  qr_invalido: 'Esse QR não é de uma carteirinha do Clube Prime.',
+  carteirinha_inativa: 'A carteirinha desse cliente está desligada no Clube Prime.',
+  loja_nao_autorizada: 'Esta conta não é de uma loja ativa do Clube Prime.',
 }
 
 /**
@@ -135,6 +155,20 @@ export async function lerLojas(busca = ''): Promise<LojaDaRede[]> {
   const { data, error } = await cliente().rpc('cash_lojas_da_rede', { p_busca: busca })
   if (error) throw error
   return (data as LojaDaRede[] | null) ?? []
+}
+
+/** As cobranças de loja esperando a pessoa logada confirmar. */
+export async function lerMinhasCobrancas(): Promise<CobrancaDoCliente[]> {
+  const { data, error } = await cliente().rpc('cash_minhas_cobrancas')
+  if (error) throw error
+  return (data as CobrancaDoCliente[] | null) ?? []
+}
+
+/** Confirma a cobrança. A chave de idempotência é por toque: dois toques no "Confirmar" pagam UMA vez. */
+export async function confirmarCobranca(cobrancaId: string): Promise<void> {
+  const chave = `confirmar:${cobrancaId}`
+  const { error } = await cliente().rpc('cash_confirmar', { p_pagamento: cobrancaId, p_chave: chave })
+  if (error) throw error
 }
 
 export async function lerExtrato(): Promise<Lancamento[]> {

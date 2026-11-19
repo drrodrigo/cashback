@@ -18,6 +18,11 @@
 
 import { MARCA } from '../marca'
 
+/** Reais do jeito brasileiro: "R$ 400,00". As frases do motor aparecem no extrato da demonstração (/beta, 19/11). */
+const rs = (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`
+/** Troco do jeito que ele fala: "40 de troco" (de `marca.ts`). */
+const tr = (n: number) => MARCA.valor(n)
+
 export interface Config {
   /** Quanto o cliente precisa juntar antes de poder descer o saldo para gastar. */
   gatilho: number
@@ -240,7 +245,7 @@ function mover(estado: Estado, de: string, para: string, valor: number, opcoes: 
   if (valor <= 0) throw new ErroDeRegra('Valor precisa ser maior que zero.')
   const disponivel = saldo(estado, de)
   if (disponivel + 0.005 < valor) {
-    throw new ErroDeRegra(`Saldo insuficiente: a conta tem ${disponivel.toFixed(2)} e a operação pede ${valor.toFixed(2)}.`)
+    throw new ErroDeRegra(`Saldo insuficiente: a conta tem ${tr(disponivel)} e a operação pede ${tr(valor)}.`)
   }
 
   let restante = arredondar(valor)
@@ -322,7 +327,7 @@ export function depositar(estado: Estado, lojaId: string, valor: number, chave?:
     de: 'externo:banco',
     para: contaCredito(lojaId),
     valor,
-    descricao: `Depósito de R$ ${valor.toFixed(2)} vira ${valor.toFixed(2)} de crédito`,
+    descricao: `Depósito de ${rs(valor)} vira ${tr(valor)} para dar`,
   })
   conferirInvariante(estado)
   return lancamento
@@ -373,7 +378,7 @@ export function darCashback(
     para: destino,
     valor,
     valorCompra,
-    descricao: `${loja.nome}: compra de R$ ${valorCompra.toFixed(2)}${opcoes.presencial ? ' na loja' : ' pela internet'} rendeu ${valor.toFixed(2)}${opcoes.restrito ? ' só para usar aqui' : ''}`,
+    descricao: `${loja.nome}: compra de ${rs(valorCompra)}${opcoes.presencial ? ' na loja' : ' pela internet'} rendeu ${tr(valor)}${opcoes.restrito ? ' só para usar aqui' : ''}`,
   })
   conferirInvariante(estado)
   return lancamento
@@ -391,7 +396,7 @@ export function descerParaGastar(estado: Estado, clienteId: string, valor: numbe
   const acumulado = saldo(estado, contaAcumulo(clienteId))
   if (acumulado < estado.config.gatilho) {
     throw new ErroDeRegra(
-      `Ainda não dá para descer: são ${acumulado.toFixed(2)} juntados e o gatilho é ${estado.config.gatilho}.`,
+      `Ainda não dá para liberar: são ${tr(acumulado)} juntados e o mínimo é ${estado.config.gatilho}.`,
     )
   }
   if (valor > acumulado + 0.005) throw new ErroDeRegra('Não dá para descer mais do que está juntado.')
@@ -405,7 +410,7 @@ export function descerParaGastar(estado: Estado, clienteId: string, valor: numbe
     de: contaAcumulo(clienteId),
     para: contaDisponivel(clienteId),
     valor,
-    descricao: `Liberou ${valor.toFixed(2)} para gastar até ${vence}`,
+    descricao: `Liberou ${tr(valor)} para gastar até ${vence.split('-').reverse().join('/')}`,
   })
   conferirInvariante(estado)
   return lancamento
@@ -439,7 +444,7 @@ export function pedirPagamento(
   }
   const pode = podeUsarNaLoja(estado, clienteId, lojaId)
   if (pode + 0.005 < valorEmCash) {
-    throw new ErroDeRegra(`O cliente tem ${pode.toFixed(2)} para usar aqui.`)
+    throw new ErroDeRegra(`O cliente tem ${tr(pode)} para usar aqui.`)
   }
 
   const pagamento: Pagamento = {
@@ -487,7 +492,7 @@ export function confirmarPagamento(estado: Estado, pagamentoId: string, chave?: 
     para: contaRecebido(lojaId),
     valor: valorEmCash,
     valorCompra,
-    descricao: `${loja?.nome ?? lojaId}: compra de R$ ${valorCompra.toFixed(2)} paga com ${valorEmCash.toFixed(2)} de ${MARCA.moeda} e R$ ${emDinheiro.toFixed(2)} em dinheiro`,
+    descricao: `${loja?.nome ?? lojaId}: compra de ${rs(valorCompra)} paga com ${tr(valorEmCash)} e ${rs(emDinheiro)} em dinheiro`,
   })
   conferirInvariante(estado)
   return lancamento
@@ -506,7 +511,7 @@ export function reciclar(estado: Estado, lojaId: string, valor: number, chave?: 
     de: contaRecebido(lojaId),
     para: contaCredito(lojaId),
     valor,
-    descricao: `Reciclou ${valor.toFixed(2)} para dar ${MARCA.moeda} de novo (sem taxa)`,
+    descricao: `Reciclou ${tr(valor)} para dar de novo (sem taxa)`,
   })
   conferirInvariante(estado)
   return lancamento
@@ -533,7 +538,7 @@ export function sacar(estado: Estado, lojaId: string, valor: number, chave?: str
   const recebido = saldo(estado, contaRecebido(lojaId))
   if (valor <= 0) throw new ErroDeRegra('Saque precisa ser maior que zero.')
   if (recebido + 0.005 < valor) {
-    throw new ErroDeRegra(`A loja recebeu ${recebido.toFixed(2)} de clientes; não dá para sacar ${valor.toFixed(2)}.`)
+    throw new ErroDeRegra(`A loja recebeu ${tr(recebido)} de clientes; não dá para sacar ${tr(valor)}.`)
   }
 
   const taxa = arredondar((valor * estado.config.taxaSaquePercentual) / 100)
@@ -569,7 +574,7 @@ export function sacar(estado: Estado, lojaId: string, valor: number, chave?: str
     de: contaRecebido(lojaId),
     para: 'externo:banco',
     valor,
-    descricao: `Sacou ${valor.toFixed(2)} e recebeu R$ ${emReais.toFixed(2)} (taxa de ${taxa.toFixed(2)})`,
+    descricao: `Sacou ${tr(valor)} e recebeu ${rs(emReais)} (taxa de ${rs(taxa)})`,
   })
   conferirInvariante(estado)
   return { lancamento, taxa, recebeEmReais: emReais }
@@ -608,7 +613,7 @@ export function avancarPara(estado: Estado, novaData: string): Lancamento[] {
         de: conta,
         para: PROMOCIONAL,
         valor,
-        descricao: `Venceu ${valor.toFixed(2)} sem uso e virou fundo de promoção`,
+        descricao: `Venceram ${tr(valor)} sem uso e foram para o fundo de promoção`,
       }),
     )
   }
@@ -638,7 +643,7 @@ export function distribuirPromocao(
   const fundo = saldo(estado, PROMOCIONAL)
   if (fundo + 0.005 < valor) {
     throw new ErroDeRegra(
-      `O fundo tem ${fundo.toFixed(2)}. Para dar mais que isso, a plataforma precisa depositar dinheiro de verdade antes.`,
+      `O fundo tem ${tr(fundo)}. Para dar mais que isso, a plataforma precisa depositar dinheiro de verdade antes.`,
     )
   }
 
@@ -653,7 +658,7 @@ export function distribuirPromocao(
     de: PROMOCIONAL,
     para: contaAcumulo(clienteId),
     valor,
-    descricao: `Campanha da rede: ${valor.toFixed(2)} de brinde`,
+    descricao: `Campanha da rede: ${tr(valor)} de brinde`,
   })
   conferirInvariante(estado)
   return lancamento
