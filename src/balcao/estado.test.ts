@@ -20,6 +20,7 @@ const LOJA: MinhaLoja = {
   loja_id: 'l1',
   nome: 'Joalheria Sol',
   cashback_percentual: 10,
+  desconto_no_caixa: 0,
   credito: 1000,
   recebido: 0,
   saque_pedido: 0,

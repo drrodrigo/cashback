@@ -13,12 +13,14 @@ import { MARCA } from '../marca'
 import {
   emPercentual,
   emReais,
+  lerDesconto,
   lerPercentual,
   lerValor,
   nomeDaOrigem,
   ondeFica,
   percentualSugerido,
   qualTelaDoAdmin,
+  regraEmTexto,
   type Achado,
   type LojaAdmin,
   type Painel,
@@ -29,7 +31,8 @@ export interface AcoesDoAdmin {
   entrar(email: string, senha: string): Promise<void>
   sair(): Promise<void>
   buscar(texto: string): Promise<void>
-  vincular(origem: Achado['origem'], origemId: string, percentual: number): Promise<void>
+  vincular(origem: Achado['origem'], origemId: string, troco: number, descontoNoCaixa: number): Promise<void>
+  salvarRegras(lojaId: string, troco: number, descontoNoCaixa: number): Promise<void>
   prepararDeposito(lojaId: string, valor: number): void
   confirmarDeposito(): Promise<void>
   cancelarDeposito(): void
@@ -188,6 +191,52 @@ function cartaoDaConferencia(p: Painel): HTMLElement {
   return s
 }
 
+/**
+ * Os dois campos das regras da loja, juntos: % de troco e % de desconto no caixa (19/11). O botão diz a regra inteira
+ * ("Vincular: 10% de desconto + 10% de troco") e se desliga quando a regra não serve.
+ */
+function camposDasRegras(
+  nome: string,
+  troco: number,
+  desconto: number,
+  rotuloDoBotao: (regra: string) => string,
+  ocupado: boolean,
+  aoConfirmar: (troco: number, desconto: number) => void,
+): HTMLElement {
+  const pct = el('input')
+  pct.type = 'text'
+  pct.inputMode = 'decimal'
+  pct.value = String(troco).replace('.', ',')
+  pct.setAttribute('aria-label', `Percentual de troco de ${nome}`)
+  const desc = el('input')
+  desc.type = 'text'
+  desc.inputMode = 'decimal'
+  desc.value = String(desconto).replace('.', ',')
+  desc.setAttribute('aria-label', `Desconto no caixa de ${nome}`)
+  const botaoDaRegra = botao('')
+  const rotular = () => {
+    const t = lerPercentual(pct.value)
+    const dsc = lerDesconto(desc.value)
+    const regra = t === null || dsc === null ? null : regraEmTexto(t, dsc)
+    botaoDaRegra.disabled = ocupado || regra === null
+    botaoDaRegra.textContent =
+      t === null ? 'Troco inválido' : dsc === null ? 'Desconto inválido' : regra === null ? 'Passa de 100%' : rotuloDoBotao(regra)
+  }
+  rotular()
+  pct.addEventListener('input', rotular)
+  desc.addEventListener('input', rotular)
+  botaoDaRegra.addEventListener('click', () => {
+    const t = lerPercentual(pct.value)
+    const dsc = lerDesconto(desc.value)
+    if (t !== null && dsc !== null && regraEmTexto(t, dsc) !== null) aoConfirmar(t, dsc)
+  })
+  return el('div', { classe: 'ca-acao' }, [
+    el('label', { classe: 'ca-campo' }, [el('span', { texto: '% de troco' }), pct]),
+    el('label', { classe: 'ca-campo' }, [el('span', { texto: '% de desconto no caixa' }), desc]),
+    botaoDaRegra,
+  ])
+}
+
 function linhaDoAchado(a: Achado, acoes: AcoesDoAdmin, d: DadosDoAdmin): HTMLElement {
   const li = el('li', { classe: 'ca-achado' })
   li.appendChild(el('strong', { texto: a.nome }))
@@ -197,30 +246,19 @@ function linhaDoAchado(a: Achado, acoes: AcoesDoAdmin, d: DadosDoAdmin): HTMLEle
       texto: ` ${nomeDaOrigem(a.origem)} · ${ondeFica(a.cidade, a.uf)}${a.contato ? ` · ${a.contato}` : ''}`,
     }),
   )
+  // Já vinculada: as regras se mudam na lista das lojas (lá aparecem as duas porcentagens de hoje). Aqui, vincular de
+  // novo zeraria o desconto no caixa sem ninguém ver.
   if (a.vinculada && a.cashback_percentual !== null) {
-    li.appendChild(el('span', { classe: 'ca-etiqueta', texto: `já no ${MARCA.nome} · ${emPercentual(a.cashback_percentual)}` }))
+    li.appendChild(
+      el('span', { classe: 'ca-etiqueta', texto: `já no ${MARCA.nome} · mude as regras em "Lojas do ${MARCA.nome}"` }),
+    )
+    return li
   }
-
-  const sugerido = percentualSugerido(a)
-  const pct = el('input')
-  pct.type = 'text'
-  pct.inputMode = 'decimal'
-  pct.value = String(sugerido).replace('.', ',')
-  pct.setAttribute('aria-label', `Percentual de troco de ${a.nome}`)
-  const ligar = botao('')
-  const rotular = () => {
-    const p = lerPercentual(pct.value)
-    ligar.disabled = d.ocupado || p === null
-    ligar.textContent =
-      p === null ? 'Percentual inválido' : a.vinculada ? `Mudar para ${emPercentual(p)}` : `Vincular com ${emPercentual(p)}`
-  }
-  rotular()
-  pct.addEventListener('input', rotular)
-  ligar.addEventListener('click', () => {
-    const p = lerPercentual(pct.value)
-    if (p !== null) void acoes.vincular(a.origem, a.origem_id, p)
-  })
-  li.appendChild(el('div', { classe: 'ca-acao' }, [el('label', { classe: 'ca-campo' }, [el('span', { texto: '% de troco' }), pct]), ligar]))
+  li.appendChild(
+    camposDasRegras(a.nome, percentualSugerido(a), 0, (regra) => `Vincular: ${regra}`, d.ocupado, (troco, desconto) =>
+      void acoes.vincular(a.origem, a.origem_id, troco, desconto),
+    ),
+  )
   return li
 }
 
@@ -288,7 +326,7 @@ function linhaDaLoja(l: LojaAdmin, acoes: AcoesDoAdmin, d: DadosDoAdmin): HTMLEl
   li.appendChild(
     el('span', {
       classe: 'ca-dica',
-      texto: ` ${nomeDaOrigem(l.origem)} · ${ondeFica(l.cidade, l.uf)} · ${emPercentual(l.cashback_percentual)}${l.ativa ? '' : ' · desligada'}`,
+      texto: ` ${nomeDaOrigem(l.origem)} · ${ondeFica(l.cidade, l.uf)} · ${regraEmTexto(Number(l.cashback_percentual), Number(l.desconto_no_caixa) || 0) ?? emPercentual(l.cashback_percentual)}${l.ativa ? '' : ' · desligada'}`,
     }),
   )
   li.appendChild(
@@ -315,6 +353,16 @@ function linhaDaLoja(l: LojaAdmin, acoes: AcoesDoAdmin, d: DadosDoAdmin): HTMLEl
     if (v !== null && v > 0) acoes.prepararDeposito(l.loja_id, v)
   })
   li.appendChild(el('div', { classe: 'ca-acao' }, [el('label', { classe: 'ca-campo' }, [el('span', { texto: 'Depósito recebido' }), valor]), registrar]))
+  li.appendChild(
+    camposDasRegras(
+      l.nome,
+      Number(l.cashback_percentual),
+      Number(l.desconto_no_caixa) || 0,
+      (regra) => `Salvar: ${regra}`,
+      d.ocupado,
+      (troco, desconto) => void acoes.salvarRegras(l.loja_id, troco, desconto),
+    ),
+  )
   return li
 }
 

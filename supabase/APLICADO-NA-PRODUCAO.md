@@ -49,6 +49,7 @@ Em 08/11 as **56 funções** bateram (na terceira volta: as duas primeiras achar
 | `cash_0020c_cidade_sem_espaco` (19/11) | `0020` | conserto achado na produção: o QR Único guarda `"Belo Horizonte "` e `"MG "`; a busca e o vínculo tiram o espaço (o mapa agrupa por cidade). Depois de subir, os 5 miolos bateram com o banco de mentira (md5) |
 | `cash_0021_vencer_todo_dia` (19/11) | `0021` | a rotina `troco-prime-vencer` (`11 7 * * *` UTC = 04:11 em Brasília) roda `cash.vencer_lotes()` todo dia |
 | `cash_0022_faxina_das_sondas` (19/11) | `0022` | apagou `cash._sonda_aspas()` e `cash._sonda_dois_reais()` (lixo de 04/10, 0 dependentes). Depois: 0 sondas, 30 `public.cash_*`, nenhuma aberta ao `anon`, a conta fecha |
+| `cash_0023_troco_sem_dobro_e_desconto_no_caixa` (19/11) | `0023` | decisão dele: o troco é o % da loja, **sem dobro** (`multiplicador_presencial` 2 → 1; com 2, R$ 200 numa loja de 10% lançava 40 e o balcão dizia 20); `cash.lojas.desconto_no_caixa` (0 = só troco); `cash_admin_regras_da_loja`; `cash_minha_loja` e `cash_admin_lojas` recriadas com a coluna nova. Depois: os 3 miolos bateram com o banco de mentira (md5), nenhuma `public.cash_*` aberta ao `anon` |
 
 ## 🔴 As três lições que esta aplicação custou
 

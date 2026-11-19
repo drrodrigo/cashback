@@ -49,6 +49,8 @@ export interface LojaAdmin {
   nome: string
   origem: Origem
   cashback_percentual: number
+  /** O desconto que a loja dá direto no caixa, além do troco (0 = só troco). 19/11, migration 0023. */
+  desconto_no_caixa: number
   ativa: boolean
   cidade: string | null
   uf: string | null
@@ -111,6 +113,29 @@ export function lerPercentual(digitado: string): number | null {
   const n = Number(limpo)
   if (!Number.isFinite(n) || n <= 0 || n > 100) return null
   return n
+}
+
+/** Lê o desconto no caixa: 0 vale (é a loja de "só troco"); de 0 a menos de 100. Vazio = 0. */
+export function lerDesconto(digitado: string): number | null {
+  const limpo = digitado.replace(/\s/g, '').replace(/%$/, '').replace(',', '.')
+  if (limpo === '') return 0
+  if (!/^\d+(\.\d+)?$/.test(limpo)) return null
+  const n = Number(limpo)
+  if (!Number.isFinite(n) || n < 0 || n >= 100) return null
+  return n
+}
+
+/**
+ * As duas formas de a loja premiar (decisão dele, 19/11), numa frase:
+ * - só troco: "20% de troco";
+ * - desconto no caixa + troco: "10% de desconto + 10% de troco".
+ * `null` quando a soma passa de 100% (o banco recusa igual: `regras_passam_de_100`).
+ */
+export function regraEmTexto(troco: number, desconto: number): string | null {
+  if (troco + desconto > 100) return null
+  return desconto > 0
+    ? `${emPercentual(desconto)} de desconto + ${emPercentual(troco)} de troco`
+    : `${emPercentual(troco)} de troco`
 }
 
 export function nomeDaOrigem(o: Origem): string {

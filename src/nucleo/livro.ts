@@ -39,7 +39,8 @@ export const CONFIG_PADRAO: Config = {
   prazoAcumuloDias: 365,
   prazoRestritoDias: 30,
   taxaSaquePercentual: 5,
-  multiplicadorPresencial: 2,
+  // 19/11: 1, sem o dobro (decisão dele: o troco é o percentual da loja). O banco tem o mesmo (`0023`).
+  multiplicadorPresencial: 1,
 }
 
 export interface Loja {
@@ -372,7 +373,7 @@ export function darCashback(
     para: destino,
     valor,
     valorCompra,
-    descricao: `${loja.nome}: compra de R$ ${valorCompra.toFixed(2)}${opcoes.presencial ? ' na loja (dobro)' : ' pela internet'} rendeu ${valor.toFixed(2)}${opcoes.restrito ? ' só para usar aqui' : ''}`,
+    descricao: `${loja.nome}: compra de R$ ${valorCompra.toFixed(2)}${opcoes.presencial ? ' na loja' : ' pela internet'} rendeu ${valor.toFixed(2)}${opcoes.restrito ? ' só para usar aqui' : ''}`,
   })
   conferirInvariante(estado)
   return lancamento

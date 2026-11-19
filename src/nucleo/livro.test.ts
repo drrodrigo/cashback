@@ -61,7 +61,8 @@ describe('a invariante', () => {
     const estado = cena()
     depositar(estado, 'padaria', 1000)
     depositar(estado, 'pizzaria', 500)
-    darCashback(estado, 'padaria', 'ana', 300, { presencial: true })
+    // 10% de 600 na loja = 60 (sem o dobro desde 19/11; antes eram 300 com o dobro).
+    darCashback(estado, 'padaria', 'ana', 600, { presencial: true })
     descerParaGastar(estado, 'ana', 60)
     pagar(estado, 'pizzaria', 'ana', 80, 60)
     sacar(estado, 'pizzaria', 40)
@@ -81,7 +82,7 @@ describe('cashback', () => {
     expect(saldoTotal(estado)).toBe(100)
   })
 
-  it('compra na loja vale o dobro da compra pela internet', () => {
+  it('sem o dobro (19/11): compra na loja rende o mesmo que pela internet, o percentual da loja', () => {
     const estado = cena()
     depositar(estado, 'padaria', 100)
     darCashback(estado, 'padaria', 'ana', 100, { presencial: true })
@@ -92,7 +93,8 @@ describe('cashback', () => {
     darCashback(outro, 'padaria', 'ana', 100, { presencial: false })
     const naInternet = saldo(outro, contaAcumulo('ana'))
 
-    expect(naLoja).toBe(naInternet * CONFIG_PADRAO.multiplicadorPresencial)
+    expect(CONFIG_PADRAO.multiplicadorPresencial).toBe(1)
+    expect(naLoja).toBe(naInternet)
   })
 
   it('recusa quando o lojista não tem crédito suficiente', () => {

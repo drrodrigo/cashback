@@ -8,7 +8,7 @@
 import './estilo.css'
 import { MARCA } from './marca'
 import { desenharAdmin, type AcoesDoAdmin, type DadosDoAdmin } from './admin/tela'
-import { emReais } from './admin/estado'
+import { emReais, regraEmTexto } from './admin/estado'
 import {
   buscarLojistas,
   eSoAdmin,
@@ -23,6 +23,7 @@ import {
   recusarSaque,
   registrarDeposito,
   sair,
+  salvarRegrasDaLoja,
   vencerAgora,
   vincularLojista,
 } from './dados'
@@ -105,13 +106,22 @@ const acoes: AcoesDoAdmin = {
       dados.busca = texto.trim()
       dados.achados = await buscarLojistas(dados.busca)
     }),
-  vincular: (origem, origemId, percentual) =>
+  vincular: (origem, origemId, troco, descontoNoCaixa) =>
     tentar(async () => {
-      await vincularLojista(origem, origemId, percentual)
+      const lojaId = await vincularLojista(origem, origemId, troco)
+      // As duas porcentagens moram juntas: vincular põe o troco; as regras põem o desconto no caixa (0 = só troco).
+      await salvarRegrasDaLoja(lojaId, troco, descontoNoCaixa)
       const nome = dados.achados?.find((a) => a.origem_id === origemId)?.nome ?? 'A loja'
       dados.achados = dados.busca ? await buscarLojistas(dados.busca) : dados.achados
       await recarregar()
-      dados.recado = `${nome} está no ${MARCA.nome} com ${percentual}% de troco. Agora registre o depósito dela.`
+      dados.recado = `${nome} está no ${MARCA.nome}: ${regraEmTexto(troco, descontoNoCaixa)}. Agora registre o depósito dela.`
+    }),
+  salvarRegras: (lojaId, troco, descontoNoCaixa) =>
+    tentar(async () => {
+      await salvarRegrasDaLoja(lojaId, troco, descontoNoCaixa)
+      const nome = dados.lojas.find((l) => l.loja_id === lojaId)?.nome ?? 'A loja'
+      await recarregar()
+      dados.recado = `${nome}: ${regraEmTexto(troco, descontoNoCaixa)}. O balcão dela já mostra a regra nova.`
     }),
   prepararDeposito: (lojaId, valor) => {
     const loja = dados.lojas.find((l) => l.loja_id === lojaId)

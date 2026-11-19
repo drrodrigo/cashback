@@ -20,6 +20,8 @@ declare
   v_loja_qr2 uuid;
   v_loja_cat uuid;
   v_uid uuid;
+  v_num2 numeric;
+  v_cli uuid;
 
   u_dono_cat uuid := 'a1111111-1111-1111-1111-111111111111';
   u_qr       uuid := 'a2222222-2222-2222-2222-222222222222';  -- a conta do Supabase do dono da ótica (confirmada)
@@ -179,6 +181,53 @@ begin
   select m.loja_id into v_uid from public.cash_minha_loja() m;
   v_ok := v_uid = v_loja_cat;
   r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end || 'o dono da loja do Catalogo continua abrindo o balcao dele' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+  execute 'reset role';
+
+  -- 13. AS REGRAS DA LOJA (0023): % de troco e % de desconto no caixa. Vestindo o administrador.
+  perform set_config('teste.e_admin', 'on', true);
+  perform public.cash_admin_regras_da_loja(v_loja_qr, 10, 10);
+  select a.cashback_percentual, a.desconto_no_caixa into v_num, v_num2 from public.cash_admin_lojas() a where a.loja_id = v_loja_qr;
+  v_ok := v_num = 10 and v_num2 = 10;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
+         || 'o administrador poe 10% de desconto no caixa e 10% de troco (' || v_num || ' e ' || v_num2 || ')' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
+  begin perform public.cash_admin_regras_da_loja(v_loja_qr, 60, 50); v_ok := false;
+  exception when others then v_ok := sqlerrm like '%regras_passam_de_100%'; end;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end || 'desconto e troco juntos passando de 100% sao recusados' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
+  begin perform public.cash_admin_regras_da_loja(v_loja_qr, 0, 10); v_ok := false;
+  exception when others then v_ok := sqlerrm like '%percentual_invalido%'; end;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end || 'troco zero e recusado (a loja do Troco Prime da troco)' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
+  -- 🔴 O CONFLITO: R$ 200 numa loja de 10%, COMPRA NA LOJA (como o balcão manda sempre) rende 20, não 40. Era 40 até a
+  --    0023, com a tela dizendo 20.
+  v_cli := cash.achar_ou_criar_cliente('31977776666', 'Cliente do Balcao');
+  perform cash.dar_cashback(v_loja_qr, v_cli, 200, true);
+  v_num := cash.saldo(cash.conta_acumulo(v_cli));
+  select p.multiplicador_presencial into v_num2 from cash.parametros p;
+  v_ok := v_num = 20 and v_num2 = 1;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
+         || 'compra de R$ 200 na loja de 10% da 20 de troco, sem dobro (veio ' || v_num || ', multiplicador ' || v_num2 || ')' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+  perform set_config('teste.e_admin', 'off', true);
+
+  begin
+    perform set_config('teste.e_admin', 'off', true);
+    perform public.cash_admin_regras_da_loja(v_loja_qr, 20, 0); v_ok := false;
+  exception when others then v_ok := sqlerrm like '%so_admin%'; end;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end || 'quem nao e admin nao muda as regras da loja' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
+  -- O balcão do dono da ótica enxerga o desconto no caixa.
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claim.sub', u_qr::text, true);
+  select m.desconto_no_caixa into v_num from public.cash_minha_loja() m;
+  v_ok := v_num = 10;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end || 'o balcao da otica mostra os 10% de desconto no caixa' || E'\n';
   if v_ok is not true then v_falhas := v_falhas + 1; end if;
   execute 'reset role';
 

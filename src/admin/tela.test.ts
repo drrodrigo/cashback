@@ -50,6 +50,7 @@ const LOJA: LojaAdmin = {
   nome: 'Açaí da Praça',
   origem: 'catalogo',
   cashback_percentual: 12,
+  desconto_no_caixa: 0,
   ativa: true,
   cidade: 'Lagoa Santa',
   uf: 'MG',
@@ -81,6 +82,7 @@ function acoes(): AcoesDoAdmin & Record<string, ReturnType<typeof vi.fn>> {
     sair: vi.fn(async () => {}),
     buscar: vi.fn(async () => {}),
     vincular: vi.fn(async () => {}),
+    salvarRegras: vi.fn(async () => {}),
     prepararDeposito: vi.fn(),
     confirmarDeposito: vi.fn(async () => {}),
     cancelarDeposito: vi.fn(),
@@ -145,32 +147,41 @@ describe('vincular o lojista pelo nome', () => {
     expect(t.a.buscar).toHaveBeenCalledWith('otica')
   })
 
-  it('a empresa do QR Único aparece com a origem e a cidade, e o botão já diz o percentual (10% do Clube)', () => {
+  it('a empresa do QR Único aparece com a origem e a cidade; o padrão é "só troco" com os 10% do Clube', () => {
     const t = montar(dados({ busca: 'otica', achados: [OTICA] }))
     expect(t.texto()).toContain('Ótica Visão')
     expect(t.texto()).toContain('QR Único · Belo Horizonte/MG')
-    const ligar = t.botao('Vincular com 10%')!
+    const ligar = t.botao('Vincular: 10% de troco')!
     expect(ligar).toBeDefined()
     ligar.click()
-    expect(t.a.vincular).toHaveBeenCalledWith('qrunico', 'u-otica', 10)
+    expect(t.a.vincular).toHaveBeenCalledWith('qrunico', 'u-otica', 10, 0)
   })
 
-  it('a loja já vinculada mostra que já está, e o botão vira "Mudar para"', () => {
+  it('a loja já vinculada não se vincula de novo pela busca (zeraria o desconto no caixa sem ninguém ver)', () => {
     const t = montar(dados({ busca: 'acai', achados: [ACAI] }))
-    expect(t.texto()).toContain('já no Troco Prime · 12%')
-    expect(t.botao('Mudar para 12%')).toBeDefined()
+    expect(t.texto()).toContain('já no Troco Prime')
+    expect(t.botoes().some((b) => (b.textContent ?? '').startsWith('Vincular'))).toBe(false)
   })
 
-  it('percentual trocado no campo vai no clique; percentual inválido desliga o botão', () => {
+  it('desconto no caixa + troco (19/11): "10% de desconto + 10% de troco" vai no clique', () => {
+    const t = montar(dados({ busca: 'otica', achados: [OTICA] }))
+    const desc = t.onde.querySelector('input[aria-label^="Desconto no caixa"]') as HTMLInputElement
+    digitar(desc, '10')
+    t.botao('Vincular: 10% de desconto + 10% de troco')!.click()
+    expect(t.a.vincular).toHaveBeenCalledWith('qrunico', 'u-otica', 10, 10)
+  })
+
+  it('troco inválido, desconto inválido ou soma acima de 100% desligam o botão', () => {
     const t = montar(dados({ busca: 'otica', achados: [OTICA] }))
     const pct = t.onde.querySelector('input[aria-label^="Percentual de troco"]') as HTMLInputElement
-    digitar(pct, '15')
-    t.botao('Vincular com 15%')!.click()
-    expect(t.a.vincular).toHaveBeenCalledWith('qrunico', 'u-otica', 15)
-
+    const desc = t.onde.querySelector('input[aria-label^="Desconto no caixa"]') as HTMLInputElement
     digitar(pct, '0')
-    const ruim = t.botao('Percentual inválido')!
-    expect(ruim.disabled).toBe(true)
+    expect(t.botao('Troco inválido')!.disabled).toBe(true)
+    digitar(pct, '60')
+    digitar(desc, '50')
+    expect(t.botao('Passa de 100%')!.disabled).toBe(true)
+    digitar(desc, 'dez')
+    expect(t.botao('Desconto inválido')!.disabled).toBe(true)
   })
 
   it('buscou e não achou: diz que não achou (é diferente de nunca ter buscado)', () => {
@@ -230,5 +241,18 @@ describe('os saques', () => {
 
   it('sem pedido em aberto, diz que não há', () => {
     expect(montar(dados({ saques: [PAGO] })).texto()).toContain('Nenhum saque esperando pagamento.')
+  })
+})
+
+describe('as regras de uma loja já vinculada', () => {
+  it('a lista mostra a regra e salva troco e desconto juntos', () => {
+    const t = montar(dados({ lojas: [{ ...LOJA, cashback_percentual: 10, desconto_no_caixa: 10 }] }))
+    expect(t.texto()).toContain('10% de desconto + 10% de troco')
+    const pct = t.onde.querySelector('input[aria-label="Percentual de troco de Açaí da Praça"]') as HTMLInputElement
+    const desc = t.onde.querySelector('input[aria-label="Desconto no caixa de Açaí da Praça"]') as HTMLInputElement
+    digitar(pct, '20')
+    digitar(desc, '0')
+    t.botao('Salvar: 20% de troco')!.click()
+    expect(t.a.salvarRegras).toHaveBeenCalledWith('l-acai', 20, 0)
   })
 })

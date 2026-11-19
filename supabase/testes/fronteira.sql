@@ -264,10 +264,11 @@ begin
          || 'loja sem parceiro do Clube avisa em vez de abrir a camera' || E'\n';
   if v_ok is not true then v_falhas := v_falhas + 1; end if;
 
-  -- 11. O CASHBACK NO LUGAR DO DESCONTO, amarrado ao atendimento. 10% de 200 na
-  --     loja (dobro) = 40, e o lançamento guarda de qual leitura ele veio.
+  -- 11. O CASHBACK NO LUGAR DO DESCONTO, amarrado ao atendimento. 10% de 400 na
+  --     loja = 40 (sem o dobro desde a 0023, decisão de 19/11), e o lançamento
+  --     guarda de qual leitura ele veio.
   perform set_config('request.jwt.claim.sub', u_parc1::text, true);
-  perform public.cash_balcao_dar_cashback(v_cli1, 200, true, false, null, v_val);
+  perform public.cash_balcao_dar_cashback(v_cli1, 400, true, false, null, v_val);
   -- (a conferência do elo com a validação é medida no fim, depois do `reset role`:
   --  vestindo o logado a gaveta recusa a tabela, de propósito)
 

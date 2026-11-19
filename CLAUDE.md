@@ -76,12 +76,12 @@ arquivos na ordem e a produção não tinha a mesma ordem.
 
 ```bash
 npm install                 # na 1a vez precisa de --legacy-peer-deps (ver vitest.config.ts)
-npm test                    # 140 testes (o motor, as telas -- carteira, balcão, administrador -- e a trava do nome)
+npm test                    # 148 testes (o motor, as telas -- carteira, balcão, administrador -- e a trava do nome)
 npm run build               # com as VITE_*; sem elas o `assets/dados-*.js` sai com 2,8 kB
                             # em vez de 219 kB (olhe ESSE arquivo, não o index-*.js)
 npm run dev
 
-bash scripts/banco-de-mentira.sh --testes   # 118 passos num Postgres descartável, de graça
+bash scripts/banco-de-mentira.sh --testes   # 124 passos num Postgres descartável, de graça
 ```
 
 ## O banco é COMPARTILHADO, e isso tem regras
@@ -145,6 +145,18 @@ migração de dado de gente:
 > dinheiro e comprar em outras lojas (...) ele tem que chegar a 30 para poder gastar (...) Chegou em 30, 40, 50, ele libera
 > e gasta, e aí ele junta de novo."*
 
+- 🟢 **Fechado em 19/11, à noite (na conversa do Troco Prime), e já no banco (`0023`):** *"em vez de dar o desconto em
+  dinheiro, a gente vai dar em crédito para gastar dentro da nossa rede (...) se um produto custa 100 e ele colocou 20%
+  de desconto, ele coloca 20% no saldo do associado do clube (...) ele pode também ter uma versão que ele dá o desconto e
+  ainda dá o troco (...) aqui você ganha 10% de desconto e ainda ganha mais 10% de cashback."*
+  - **O troco é o % da loja, SEM DOBRO.** A regra de 06/09 do dobro na compra presencial estava ligada
+    (`multiplicador_presencial = 2`) e o balcão manda toda compra como presencial: R$ 200 numa loja de 10% lançaria 40,
+    com a tela dizendo 20. Desligada (1). O botão segue em `cash.parametros`, para uma campanha um dia.
+  - **Duas formas de a loja premiar**, nas regras de cada loja (`cash_admin_regras_da_loja`, tela `/admin`):
+    **só troco** (`desconto_no_caixa` = 0, troco 20%) ou **desconto no caixa + troco** (10% + 10%). O desconto no caixa
+    a loja aplica no preço; o Troco Prime guarda e MOSTRA (o balcão diz "Dá 10% de desconto no caixa e ainda devolve 10%
+    em troco" e pede o **valor pago**, já com o desconto). O troco é o % sobre o valor que o vendedor digita.
+  - Desconto + troco passando de 100% é recusado (`regras_passam_de_100`).
 - **O percentual é o DESCONTO DO CLUBE, da loja inteira** (não por produto): o Clube Prime dá 10%, o Clube de Ofertas Prime
   15% ou mais. Em vez de abater, a loja cobra o preço cheio e devolve o percentual em pontos (paga 100, ganha 20). É o
   percentual da LOJA que já existe no motor.
@@ -158,7 +170,8 @@ migração de dado de gente:
   - o desconto do Clube **vira pontos** (paga 100, ganha 10 ou 20);
   - **ou dá o desconto E pontos a mais**, fixos por produto ou por compra (10% + 5 pontos).
 
-  O motor hoje só tem o percentual da loja. "Pontos fixos por produto" é regra nova: desenhar com ele antes de programar.
+  O "desconto + troco" em percentual da loja inteira está feito (`0023`, acima). **"Pontos fixos por produto"** (o "+5
+  pontos" em cada produto) continua regra nova: desenhar com ele antes de programar.
   O §5 do desenho já tem uma parente ("cashback em dobro na loja") e o terceiro saldo do §1 (o extra que só vale naquela
   loja).
 - **A porta do cliente é o QR Bio** (a captação do Clube): a conta do cashback aparece ao lado da carteirinha. A escada

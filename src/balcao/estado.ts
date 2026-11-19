@@ -24,6 +24,8 @@ export interface MinhaLoja {
   loja_id: string
   nome: string
   cashback_percentual: number
+  /** O desconto que a loja dá direto no caixa, além do troco (0 = só troco). Decisão de 19/11, migration 0023. */
+  desconto_no_caixa: number
   /** O que a loja ainda pode DAR de cashback (o que ela depositou). */
   credito: number
   /** O que clientes já pagaram a ela em cash. */
@@ -148,6 +150,17 @@ export function tetoDaCobranca(valorDaCompra: number, podeUsarAqui: number): num
  * Ela existe porque o produto se explica no balcão, não na tela: quem convence a
  * pessoa a voltar é o vendedor dizendo o número.
  */
+/**
+ * A regra da loja numa frase (19/11): "só troco" ou "desconto no caixa + troco". Na voz dele: *"aqui você ganha 10% de
+ * desconto e ainda ganha mais 10%"*.
+ */
+export function regraDaLoja(loja: Pick<MinhaLoja, 'cashback_percentual' | 'desconto_no_caixa'>, moeda: string): string {
+  const d = Number(loja.desconto_no_caixa) || 0
+  return d > 0
+    ? `Dá ${d}% de desconto no caixa e ainda devolve ${loja.cashback_percentual}% em ${moeda}.`
+    : `Devolve ${loja.cashback_percentual}% em ${moeda} a cada compra.`
+}
+
 export function fraseDoAtendimento(cliente: Cliente, loja: MinhaLoja): string {
   if (cliente.pode_usar_aqui > 0) {
     return `${cliente.nome} tem ${emReais(cliente.pode_usar_aqui)} para usar aqui agora.`
