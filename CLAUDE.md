@@ -26,6 +26,25 @@ carteirinha do Clube Prime, é gerida pelo QR Bio."* E: *"uma conta corrente (..
 como se fosse um Pix"* — entre o cliente e a loja; o saldo **não** passa de uma pessoa para outra (é o que mantém isto como
 programa de fidelidade). O mapa dos produtos: `drrodrigo/qrbio`, `docs/O-CAMINHO.md`.
 
+### 🔴 O contrato com o QR Bio (no ar desde 19/11; conferido no banco vivo em 19/11)
+
+O QR Bio tem login próprio, então a ponte dele (`public.qrbio_troco*`, no `drrodrigo/qrbio.me` #26) **não** usa as
+`public.cash_*` do cliente (que acham a pessoa por `auth.uid()`). Ela acha o sócio pelo e-mail e chama, por dentro:
+
+- as 7 internas "por sócio" da migration `0019`, só `service_role`: `cash.carteira_do_membro(uuid)`,
+  `cash.aderir_membro(uuid)`, `cash.descer_do_membro(uuid, numeric, text)`, `cash.cobrancas_do_membro(uuid)`,
+  `cash.confirmar_do_membro(uuid, uuid, text)`, `cash.extrato_do_membro(uuid, integer)`, `cash.restritos_do_membro(uuid)`;
+- `public.cash_lojas_da_rede(p_busca text)` (`loja_id, nome, cashback_percentual, cidade, uf, catalogo_slug`).
+
+**Os códigos de erro que a ponte lê pelo texto** (`sqlerrm`): `precisa_ser_do_clube`, `gatilho_nao_alcancado`,
+`abaixo_do_minimo`, `saldo_insuficiente`, `valor_invalido`, `precisa_entrar`, `cobranca_nao_encontrada`,
+`cash_passa_da_compra`. A chave de idempotência que ela manda começa com `qrbio:`.
+
+**Mudar nome, assinatura, coluna devolvida ou código de erro de qualquer um desses = avisar a conversa do QR Bio ANTES**
+(`send_message`), para a ponte mudar junto. E a regra do cliente agora **mora na interna**: as 7 `public.cash_*` do cliente
+são uma linha que chama a interna com `auth.uid()`. Arquivo velho que der `create or replace` numa delas põe a regra de volta
+em dois lugares (a regra 7, abaixo) — mude a interna.
+
 ## O que é
 
 Cashback com moeda própria: em vez de dar desconto, a loja devolve **cash**, que o cliente
