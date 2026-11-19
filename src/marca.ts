@@ -5,22 +5,27 @@
 // este arquivo, e o aplicativo inteiro acompanha. O nome da moeda foi escolhido
 // pelo Rodrigo em 14/09 -- "põe cash, esse é o nome dela para começar" -- e o
 // "para começar" é literal: trocar depois custa uma linha daqui.
+//
+// 19/11/2026: TROCO PRIME (na conversa do QR Bio). "QR Cash" ele achou registrado, e "QR Coin" já é o
+// nome de uma criptomoeda (o token $QR da rede Base). "Troco" é o que volta da compra, todo brasileiro
+// entende, e não tem cara de cripto nem de banco; o domínio trocoprime.com.br estava livre em 19/11.
+// Na frase do balcão: "você tem 30 de troco; paga 70 e usa o troco".
 // ---------------------------------------------------------------------------
 
 export const MARCA = {
   /** O produto. */
-  nome: 'Cash',
+  nome: 'Troco Prime',
 
-  /** A unidade, como aparece no meio da frase: "você tem 50 cash". */
-  moeda: 'cash',
+  /** A unidade, como aparece no meio da frase: "você tem 50,00 de troco". */
+  moeda: 'troco',
 
-  /** Como o valor aparece escrito: 50 cash. */
-  valor: (n: number) => `${n.toFixed(2).replace('.', ',')} cash`,
+  /** Como o valor aparece escrito: 50,00 de troco. */
+  valor: (n: number) => `${n.toFixed(2).replace('.', ',')} de troco`,
 
   /** Reais, para o que é dinheiro de verdade -- custódia, depósito e saque. */
   reais: (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`,
 
-  tagline: 'O desconto que volta como visita.',
+  tagline: 'O desconto que volta como troco.',
 
   /** Verde-petróleo: dinheiro sem ser o verde de cifrão, e longe do âmbar do BipeChat. */
   cor: '#0F766E',

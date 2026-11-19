@@ -16,6 +16,8 @@
 // mexem na custódia na mesma operação.
 // ---------------------------------------------------------------------------
 
+import { MARCA } from '../marca'
+
 export interface Config {
   /** Quanto o cliente precisa juntar antes de poder descer o saldo para gastar. */
   gatilho: number
@@ -290,7 +292,7 @@ function jaFeito(estado: Estado, chave?: string): Lancamento | null {
 function conferirInvariante(estado: Estado): void {
   if (!invarianteFecha(estado)) {
     throw new Error(
-      `Invariante quebrada: existe ${saldoTotal(estado).toFixed(2)} em cash para ${estado.custodia.toFixed(2)} em custódia.`,
+      `Invariante quebrada: existe ${saldoTotal(estado).toFixed(2)} em ${MARCA.moeda} para ${estado.custodia.toFixed(2)} em custódia.`,
     )
   }
 }
@@ -427,12 +429,12 @@ export function pedirPagamento(
   valorEmCash: number,
 ): Pagamento {
   if (valorCompra <= 0) throw new ErroDeRegra('Valor da compra precisa ser maior que zero.')
-  if (valorEmCash <= 0) throw new ErroDeRegra('Valor em cash precisa ser maior que zero.')
+  if (valorEmCash <= 0) throw new ErroDeRegra(`Valor em ${MARCA.moeda} precisa ser maior que zero.`)
   // Aceitação é incondicional: loja da rede aceita cash sem compra mínima e sem
   // teto. O único limite é o valor da própria compra -- ninguém paga 60 numa
   // compra de 50.
   if (valorEmCash > valorCompra + 0.005) {
-    throw new ErroDeRegra('O cash usado não pode passar do valor da compra.')
+    throw new ErroDeRegra(`O ${MARCA.moeda} usado não pode passar do valor da compra.`)
   }
   const pode = podeUsarNaLoja(estado, clienteId, lojaId)
   if (pode + 0.005 < valorEmCash) {
@@ -484,7 +486,7 @@ export function confirmarPagamento(estado: Estado, pagamentoId: string, chave?: 
     para: contaRecebido(lojaId),
     valor: valorEmCash,
     valorCompra,
-    descricao: `${loja?.nome ?? lojaId}: compra de R$ ${valorCompra.toFixed(2)} paga com ${valorEmCash.toFixed(2)} de cash e R$ ${emDinheiro.toFixed(2)} em dinheiro`,
+    descricao: `${loja?.nome ?? lojaId}: compra de R$ ${valorCompra.toFixed(2)} paga com ${valorEmCash.toFixed(2)} de ${MARCA.moeda} e R$ ${emDinheiro.toFixed(2)} em dinheiro`,
   })
   conferirInvariante(estado)
   return lancamento

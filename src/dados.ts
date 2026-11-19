@@ -20,6 +20,7 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Carteira, Lancamento, LojaDaRede } from './carteira/estado'
 import type { Cliente, Cobranca, MinhaLoja } from './balcao/estado'
+import { MARCA } from './marca'
 
 // `.trim()` porque copiar-e-colar em painel de deploy quase sempre traz um
 // espaço ou uma quebra de linha grudada no fim -- o Clube já pagou por isso.
@@ -52,7 +53,7 @@ export const supabase = faltaConfigurar
 /** A frase que a pessoa lê quando a fronteira recusa. */
 const FRASES: Record<string, string> = {
   precisa_entrar: 'Entre na sua conta para ver o cashback.',
-  precisa_ser_do_clube: 'A conta corrente de cash é do membro do Clube Prime. Entre no Clube e volte aqui.',
+  precisa_ser_do_clube: `A conta corrente de ${MARCA.moeda} é do membro do Clube Prime. Entre no Clube e volte aqui.`,
   gatilho_nao_alcancado: 'Você ainda não juntou o suficiente para transferir.',
   abaixo_do_minimo: 'A transferência tem um mínimo. Transfira pelo menos o valor indicado.',
   saldo_insuficiente: 'Você não tem esse valor juntado.',

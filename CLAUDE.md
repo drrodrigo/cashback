@@ -36,7 +36,7 @@ arquivos na ordem e a produção não tinha a mesma ordem.
 
 ```bash
 npm install                 # na 1a vez precisa de --legacy-peer-deps (ver vitest.config.ts)
-npm test                    # 54 testes (29 do motor + 25 da tela)
+npm test                    # 106 testes (o motor, as telas e a trava do nome)
 npm run build               # com as VITE_*; sem elas o `assets/dados-*.js` sai com 2,8 kB
                             # em vez de 219 kB (olhe ESSE arquivo, não o index-*.js)
 npm run dev
@@ -130,11 +130,18 @@ migração de dado de gente:
   - A regra do §7 do desenho continua: **o que mantém isto como programa de fidelidade são os fatos** (o cliente não compra
     pontos com dinheiro, não saca, não transfere), e na comunicação se fala **"pontos"**, nunca "moeda" ou "meio de
     pagamento".
-  - O nome continua "cash" no código (`src/marca.ts`) até ele escolher. Antes de imprimir: busca no INPI e um advogado.
+  - 🟢 **Escolhido em 19/11: TROCO PRIME** (*"faz sentido"*, à recomendação). "Troco" é o que volta da compra, todo
+    brasileiro entende, sem cara de cripto nem de banco; "Troco Prime" junto é registrável (só "troco" seria palavra
+    comum). Na frase do balcão: *"você tem 30 de troco; paga 70 e usa o troco"*. O domínio **trocoprime.com.br estava
+    LIVRE** em 19/11 (RDAP do registro.br); registrar custa ~R$ 40/ano e só com o OK dele. Antes de imprimir: a busca no
+    INPI e um advogado.
+  - No código: `src/marca.ts` (nome "Troco Prime", unidade "troco", "30,00 de troco"). **Toda frase de tela lê o nome
+    de lá**: em 19/11 havia 11 frases e 3 títulos com "cash" à mão, e a trava `src/aMarcaMoraNumLugarSo.test.ts`
+    (falsificada) reprova a próxima. Os nomes internos (a gaveta `cash`, `public.cash_*`, `valor_em_cash`) ficam: são do
+    banco, não da tela.
 
 ## Decisões dele que ainda estão abertas
 
-- **O nome dos pontos** (acima).
 - **A sobra conta para o ciclo seguinte?** Quem junta 45 e transfere 30 fica com 15. Hoje esses
   15 contam para os próximos 30 (a fala de 19/11, *"ele tem que estar sempre juntando"*, combina com isso).
 - **Quais 3–5 parceiros começam** (o percentual é o do Clube: 10% no Prime, 15%+ no de Ofertas).

@@ -195,7 +195,7 @@ describe('dar cashback', () => {
   it('o botão diz o VALOR que vai ser lançado, não "confirmar"', () => {
     const t = montar({ cliente: CLIENTE })
     digitar(t, 'Valor da compra', '200')
-    expect(texto(t)).toContain('Ana do Clube ganha R$ 20,00 de cash nesta compra')
+    expect(texto(t)).toContain('Ana do Clube ganha R$ 20,00 de troco nesta compra')
     expect(botoes(t).some((b) => b === 'Lançar R$ 20,00')).toBe(true)
   })
 
@@ -234,7 +234,7 @@ describe('cobrar', () => {
     const t = montar({ cliente: CLIENTE, modo: 'cobrar' }, a)
     digitar(t, 'Valor da compra', '100')
     expect(texto(t)).toContain('Pode usar até R$ 40,00 nesta compra')
-    digitar(t, 'Quanto em cash', '40')
+    digitar(t, 'Quanto em troco', '40')
     acharBotao(t, 'Pedir confirmação')!.click()
     expect(a.cobrar).toHaveBeenCalledWith(100, 40)
   })
@@ -243,7 +243,7 @@ describe('cobrar', () => {
   it('passar do saldo do cliente é recusado na tela', () => {
     const t = montar({ cliente: CLIENTE, modo: 'cobrar' })
     digitar(t, 'Valor da compra', '100')
-    digitar(t, 'Quanto em cash', '60')
+    digitar(t, 'Quanto em troco', '60')
     expect(texto(t)).toContain('Passou do limite: o máximo aqui é R$ 40,00')
     expect(acharBotao(t, 'Pedir confirmação')!.disabled).toBe(true)
   })
@@ -254,7 +254,7 @@ describe('cobrar', () => {
     const t = montar({ cliente: { ...CLIENTE, pode_usar_aqui: 500 }, modo: 'cobrar' })
     digitar(t, 'Valor da compra', '50')
     expect(texto(t)).toContain('Pode usar até R$ 50,00 nesta compra')
-    digitar(t, 'Quanto em cash', '60')
+    digitar(t, 'Quanto em troco', '60')
     expect(acharBotao(t, 'Pedir confirmação')!.disabled).toBe(true)
   })
 
@@ -279,7 +279,7 @@ describe('as listas', () => {
     })
     expect(texto(t)).toContain('Esperando o cliente confirmar')
     expect(texto(t)).toContain('Bruno')
-    expect(texto(t)).toContain('R$ 20,00 de cash numa compra de R$ 80,00')
+    expect(texto(t)).toContain('R$ 20,00 de troco numa compra de R$ 80,00')
     expect(texto(t)).toContain('08/11 14:30')
   })
 
