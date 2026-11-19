@@ -29,6 +29,9 @@ export default defineConfig({
         // rede e relógio sem depender de banco nenhum. Serve para explicar o
         // produto a quem nunca viu.
         demonstracao: resolve(__dirname, 'demonstracao.html'),
+        // O ADMINISTRADOR (19/11): vincular o lojista do Catálogo ou do QR Único, registrar o depósito dele, pagar
+        // o saque e conferir que a conta da rede fecha. Só abre para quem o banco diz que é administrador.
+        admin: resolve(__dirname, 'admin.html'),
       },
     },
   },

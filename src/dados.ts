@@ -20,6 +20,7 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Carteira, Lancamento, LojaDaRede } from './carteira/estado'
 import type { Cliente, Cobranca, MinhaLoja } from './balcao/estado'
+import type { Achado, LojaAdmin, Painel, SaquePedido } from './admin/estado'
 import { MARCA } from './marca'
 
 // `.trim()` porque copiar-e-colar em painel de deploy quase sempre traz um
@@ -58,6 +59,10 @@ const FRASES: Record<string, string> = {
   abaixo_do_minimo: 'A transferência tem um mínimo. Transfira pelo menos o valor indicado.',
   saldo_insuficiente: 'Você não tem esse valor juntado.',
   valor_invalido: 'Esse valor não serve.',
+  so_admin: 'Esta conta não é de administrador.',
+  empresa_do_qrunico_nao_encontrada: 'Essa empresa não está mais ativa no QR Único.',
+  loja_do_catalogo_nao_encontrada: 'Essa loja não existe mais no Catálogo Online.',
+  pedido_ja_resolvido: 'Esse saque já foi resolvido por outra pessoa. A lista foi atualizada.',
 }
 
 /**
@@ -221,4 +226,78 @@ export async function lerExtratoDaLoja(): Promise<Lancamento[]> {
 export async function pedirSaque(valor: number): Promise<void> {
   const { error } = await cliente().rpc('cash_balcao_pedir_saque', { p_valor: valor })
   if (error) throw error
+}
+
+// --- o ADMINISTRADOR (19/11) ----------------------------------------------------
+//
+// Todas passam por `public.e_admin()` no banco, a cada chamada: a tela não guarda "sou admin", ela só repete o que
+// o banco respondeu. Quem não é recebe `so_admin` em tudo.
+
+export async function lerPainel(): Promise<Painel | null> {
+  const { data, error } = await cliente().rpc('cash_admin_painel')
+  if (error) throw error
+  return (data as Painel[] | null)?.[0] ?? null
+}
+
+/** O erro do banco é o "você não é administrador"? (É o que muda a tela, não um recado.) */
+export function eSoAdmin(e: unknown): boolean {
+  const bruto = e as { message?: string; hint?: string } | null
+  return `${bruto?.message ?? ''} ${bruto?.hint ?? ''}`.includes('so_admin')
+}
+
+/** Digita o nome, acha no Catálogo Online e no QR Único. */
+export async function buscarLojistas(busca: string): Promise<Achado[]> {
+  const { data, error } = await cliente().rpc('cash_admin_buscar_lojistas', { p_busca: busca })
+  if (error) throw error
+  return (data as Achado[] | null) ?? []
+}
+
+export async function vincularLojista(origem: Achado['origem'], origemId: string, percentual: number): Promise<void> {
+  const { error } =
+    origem === 'qrunico'
+      ? await cliente().rpc('cash_admin_vincular_qrunico', { p_usuario: origemId, p_cashback_percentual: percentual })
+      : await cliente().rpc('cash_admin_ligar_loja_do_catalogo', {
+          p_catalogo_loja_id: origemId,
+          p_cashback_percentual: percentual,
+        })
+  if (error) throw error
+}
+
+export async function lerLojasDoAdmin(): Promise<LojaAdmin[]> {
+  const { data, error } = await cliente().rpc('cash_admin_lojas')
+  if (error) throw error
+  return (data as LojaAdmin[] | null) ?? []
+}
+
+/**
+ * Registra o depósito do lojista: é ele que vira o troco que a loja pode dar.
+ *
+ * A CHAVE DE IDEMPOTÊNCIA nasce na confirmação, uma por confirmação: dois toques no "Confirmo" viram UM depósito.
+ */
+export async function registrarDeposito(lojaId: string, valor: number, chave: string): Promise<void> {
+  const { error } = await cliente().rpc('cash_admin_depositar', { p_loja: lojaId, p_valor: valor, p_chave: chave })
+  if (error) throw error
+}
+
+export async function lerSaquesPedidos(): Promise<SaquePedido[]> {
+  const { data, error } = await cliente().rpc('cash_admin_saques_pedidos')
+  if (error) throw error
+  return (data as SaquePedido[] | null) ?? []
+}
+
+export async function pagarSaque(id: string): Promise<void> {
+  const { error } = await cliente().rpc('cash_admin_pagar_saque', { p_pedido: id })
+  if (error) throw error
+}
+
+export async function recusarSaque(id: string): Promise<void> {
+  const { error } = await cliente().rpc('cash_admin_recusar_saque', { p_pedido: id, p_motivo: '' })
+  if (error) throw error
+}
+
+/** Adianta o vencimento de hoje. Devolve quantos lotes venceram. */
+export async function vencerAgora(): Promise<number> {
+  const { data, error } = await cliente().rpc('cash_admin_vencer')
+  if (error) throw error
+  return Number(data ?? 0)
 }

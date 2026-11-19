@@ -76,12 +76,12 @@ arquivos na ordem e a produção não tinha a mesma ordem.
 
 ```bash
 npm install                 # na 1a vez precisa de --legacy-peer-deps (ver vitest.config.ts)
-npm test                    # 106 testes (o motor, as telas e a trava do nome)
+npm test                    # 138 testes (o motor, as telas -- carteira, balcão, administrador -- e a trava do nome)
 npm run build               # com as VITE_*; sem elas o `assets/dados-*.js` sai com 2,8 kB
                             # em vez de 219 kB (olhe ESSE arquivo, não o index-*.js)
 npm run dev
 
-bash scripts/banco-de-mentira.sh --testes   # 81 passos num Postgres descartável, de graça
+bash scripts/banco-de-mentira.sh --testes   # 118 passos num Postgres descartável, de graça
 ```
 
 ## O banco é COMPARTILHADO, e isso tem regras
@@ -200,7 +200,17 @@ migração de dado de gente:
    Conferir de fora: `curl -s "https://dns.google/resolve?name=trocoprime.com.br&type=A"`.
 3. O item "Meu cashback" no Clube Prime: **feito e mesclado** (`drrodrigo/clubeprime` #104, 08/11), **não publicado**
    (esperando "publica o clube"). Agora que a porta é o QR Bio, decidir se ele continua, e se passa a dizer "Troco Prime".
-4. **A porta no QR Bio** (19/11): as regras por sócio (`0017`) e a ponte `qrbio_troco_*` (`drrodrigo/qrbio.me`), prontas e
-   testadas, esperando o OK dele para subir.
-5. A tela do administrador, o aviso de vencimento (7 e 2 dias) e o vencimento automático: não existem.
-6. O primeiro parceiro de verdade (zero loja, zero cliente em 19/11).
+4. ~~A porta no QR Bio~~: **no ar desde 19/11** (a `0019` e a ponte `qrbio_troco_*`; ver "O contrato com o QR Bio").
+5. ~~A tela do administrador~~: **feita em 19/11**, `/admin` (`admin.html`). Ele pediu: *"digita o nome dele lá e vincula"*.
+   - **Vincular lojista:** digita o nome; a busca olha no **Catálogo Online** e no **QR Único**, sem acento, e diz quem já
+     está vinculado. O percentual já vem escrito: o desconto do Clube que a loja do Catálogo declara, senão 10%.
+   - **Depósito em dois passos:** "Registrar depósito" só prepara; a confirmação diz valor e loja por extenso (trava
+     falsificada em `src/admin/tela.test.ts`).
+   - Saques pedidos (marcar pago / recusar), a conferência da rede ("bate" / "NÃO BATE") e "vencer agora".
+   - 🔴 **A loja do QR Único tem login próprio** (nenhum id igual ao `auth.users`). O balcão dela abre para a conta do
+     Supabase com o **mesmo e-mail, confirmado** (`cash.loja_do_usuario`, `0020`). Sem conta com esse e-mail, o lojista
+     precisa criar uma (é o mesmo login do Clube) e confirmar o e-mail.
+   - A mesma loja pode existir nos dois (medido: "Ágape Jóias" está no Catálogo e no QR Único). Vincule **uma** vez.
+6. ~~O vencimento automático~~: **feito em 19/11**, rotina `troco-prime-vencer` (04:11 em Brasília). Falta o **aviso** de
+   vencimento (7 e 2 dias): precisa de um canal (push do QR Bio, WhatsApp ou e-mail).
+7. O primeiro parceiro de verdade (zero loja, zero cliente em 19/11).

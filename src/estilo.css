@@ -617,3 +617,31 @@ button.discreto:hover { background: var(--surface-2); color: var(--ink); }
   font-size: 0.78rem;
   opacity: 0.7;
 }
+
+/* --- a tela do administrador (19/11) ------------------------------------- */
+.ca-achado {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.ca-etiqueta {
+  align-self: flex-start;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--cash);
+  color: var(--cash);
+}
+.ca-acao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+.ca-acao .ca-campo {
+  flex: 1 1 8rem;
+  min-width: 0;
+}
+.ca-confirmar {
+  border: 2px solid var(--cash);
+}
