@@ -48,8 +48,8 @@ export type Papel = 'cliente' | 'loja' | 'admin'
 
 /** As contas de teste. A senha de todas é 123456. */
 export const CONTAS_DE_TESTE = [
-  { email: 'ana@trocoprime.teste', nome: 'Ana Souza', papel: 'cliente', id: 'ana', sobre: 'cliente do Clube, ainda sem ativar' },
-  { email: 'bruno@trocoprime.teste', nome: 'Bruno Lima', papel: 'cliente', id: 'bruno', sobre: 'cliente do Clube, com 40 de troco juntado' },
+  { email: 'ana@trocoprime.teste', nome: 'Ana Souza', papel: 'cliente', id: 'ana', sobre: 'cliente do Clube, começa sem ativar' },
+  { email: 'bruno@trocoprime.teste', nome: 'Bruno Lima', papel: 'cliente', id: 'bruno', sobre: 'cliente do Clube, começa com 40 de troco juntado' },
   { email: 'otica@trocoprime.teste', nome: 'Ótica Visão', papel: 'loja', id: 'otica', sobre: 'loja do QR Único, só troco: 10%' },
   { email: 'padaria@trocoprime.teste', nome: 'Padaria Pão Quente', papel: 'loja', id: 'padaria', sobre: 'loja do Catálogo, 10% de desconto + 10% de troco' },
   { email: 'admin@trocoprime.teste', nome: 'Administração', papel: 'admin', id: 'admin', sobre: 'vincula lojas, registra depósito, paga saque' },
