@@ -5,6 +5,13 @@
 > commits de história. O motivo foi dele: *"eu quero separado do catálogo pq tá aumentando meu
 > custo que toda vez que atualiza um atualiza o outro e eu pago mais caro"*.
 
+## 🔴 Quem cuida (19/11)
+
+**A conversa do QR Bio** (`drrodrigo/qrbio`), a pedido dele: *"você vai ser o cashback, você vai ser o Troco Prime"*. O
+produto continua SEPARADO (este repositório, a gaveta `cash`, `trocoprime.com.br`); a conversa é uma só porque **a porta
+do cliente é o QR Bio** (a conta ao lado da carteirinha do Clube). O mapa dos produtos: `drrodrigo/qrbio`,
+`docs/O-CAMINHO.md`.
+
 ## O que é
 
 Cashback com moeda própria: em vez de dar desconto, a loja devolve **cash**, que o cliente
