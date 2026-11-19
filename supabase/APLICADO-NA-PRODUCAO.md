@@ -43,6 +43,7 @@ Em 08/11 as **56 funções** bateram (na terceira volta: as duas primeiras achar
 | `cash_0012_minha_carteira` | `0012` | a tela sabe se a pessoa é do Clube |
 | `cash_0016_devolve_o_conserto_que_eu_desfiz` + `cash_0017_as_portas_outra_vez` | `0016` | **conserto de um erro meu**: ver abaixo |
 | `cash_0018_o_mapa_volta_a_agrupar_por_cidade` | `0010` | a terceira coisa que o mesmo erro derrubou: o mapa ordenava por cidade |
+| `cash_0019_as_regras_por_socio` (19/11) | `0019` | as regras do cliente viram internas "por sócio" (`cash.*_do_membro`), fechadas; as 7 `public.cash_*` do cliente viram uma linha que chama a interna com `auth.uid()`. É a porta do QR Bio (`qrbio_troco_*`, no `drrodrigo/qrbio.me`). Antes de subir, o miolo vivo das 7 bateu com o copiado; depois, as 14 bateram com o arquivo (md5) e as portas ficaram como eram (públicas: `authenticated` sim, `anon` não; internas: só `service_role`) |
 
 ## 🔴 As três lições que esta aplicação custou
 
