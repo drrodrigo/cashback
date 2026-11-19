@@ -78,7 +78,7 @@ arquivos na ordem e a produção não tinha a mesma ordem.
 
 ```bash
 npm install                 # na 1a vez precisa de --legacy-peer-deps (ver vitest.config.ts)
-npm test                    # 204 testes (o motor, as telas, o /app e o /beta, a carteirinha, a demonstração, as travas)
+npm test                    # 212 testes (o motor, as telas, o /app e o /beta, a carteirinha, a logo, a demonstração, as travas)
 npm run build               # com as VITE_*; sem elas o `assets/dados-*.js` sai com 2,8 kB
                             # em vez de 219 kB (olhe ESSE arquivo, não o index-*.js)
 npm run dev
@@ -269,5 +269,12 @@ você vai me mostrando e eu vou testando e vou te falando o que mudar"*.
   do celular fecha a folha. Banco: `public.cash_minha_carteirinha()` e `public.cash_qr_da_carteirinha()`, portas para as
   funções FECHADAS do Clube (`clube.carteirinha_de`, `clube.emitir_token_de`), como o QR Bio faz; nada do Clube se copia.
   No `/beta`, o QR leva o token de teste e a folha explica que a loja lê pelo atalho.
+- **A logo (19/11):** ele escolheu, entre 4 que o ChatGPT desenhou, o **"T de retorno"** (o T verde com a seta laranja
+  que faz a volta). Originais e o 1024 em `docs/marca/`; servidos de `public/`: `icone-48/192/512.png` (redondo, cantos
+  transparentes), `icone-cheio-512.png` e `apple-touch-icon.png` (cheio: o celular arredonda), `logo-troco-prime.png` (a
+  deitada, fundo transparente) e o `manifest.webmanifest` do `/app` (instalar na tela do celular). O caminho mora em
+  `MARCA.icone` e `MARCA.logo`. A moedinha 🪙 que era o ícone do navegador saiu: a trava `src/icone.test.ts`
+  (falsificada) reprova a página que voltar a ter moeda ou ficar sem o ícone. A logo é de imagem (PNG); para gráfica e
+  placa, pedir a versão em vetor (SVG).
 - **Todo código de erro do banco tem frase** em `FRASES` (`src/dados.ts`): a trava `src/frasesDoBanco.test.ts` lê cada
   `raise exception` das migrations e reprova o código que chegaria cru na tela (falsificada).

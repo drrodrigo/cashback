@@ -10,6 +10,7 @@
 // lança nada. Quem lança é o botão de baixo, que diz o valor.
 // ---------------------------------------------------------------------------
 
+import { tituloComIcone } from '../lib/marcaNaTela'
 import { MARCA } from '../marca'
 import {
   cashbackDaCompra,
@@ -90,7 +91,7 @@ function aviso(texto: string, tipo: 'erro' | 'recado' = 'erro'): HTMLElement {
 
 function cabecalho(loja: MinhaLoja | null, acoes: AcoesDoBalcao): HTMLElement {
   const h = el('header', { classe: 'ca-topo' })
-  h.appendChild(el('h1', { texto: `${MARCA.nome} — Balcão` }))
+  h.appendChild(tituloComIcone(`${MARCA.nome} — Balcão`))
   h.appendChild(el('p', { classe: 'ca-tagline', texto: loja ? loja.nome : MARCA.tagline }))
   const voltar = el('a', { classe: 'ca-voltar', texto: '← Voltar ao Clube' })
   voltar.setAttribute('href', VOLTAR_AO_CLUBE)

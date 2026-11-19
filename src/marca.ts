@@ -33,4 +33,11 @@ export const MARCA = {
 
   /** Verde-petróleo: dinheiro sem ser o verde de cifrão, e longe do âmbar do BipeChat. */
   cor: '#0F766E',
+
+  /**
+   * A logo (19/11, escolhida por ele entre 4 que o ChatGPT desenhou: a "T de retorno", o T com a seta laranja que faz
+   * a volta). Os originais e o 1024 estão em `docs/marca/`; os tamanhos servidos, em `public/`.
+   */
+  icone: '/icone-192.png',
+  logo: '/logo-troco-prime.png',
 } as const
