@@ -1,4 +1,8 @@
-# Cash — a moeda da rede
+# Troco Prime — o desconto do Clube Prime que volta como troco
+
+> Repositório `drrodrigo/trocoprime` (até 19/11/2026 se chamava `drrodrigo/cashback`), site **trocoprime.com.br**.
+> O nome antigo do produto era "cash"; os nomes internos do banco (`cash.*`, `public.cash_*`) continuam.
+> O estado de hoje e as regras estão no `CLAUDE.md`; o texto abaixo é a história de 14/09 em diante.
 
 Cashback com moeda própria: em vez de dar desconto, a loja devolve **cash**, que o
 cliente gasta em qualquer loja da rede. Desconto sai do caixa hoje; cash só é pago
