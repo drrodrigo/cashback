@@ -4,6 +4,7 @@
 // "Troco Prime", havia 11 frases de tela com "cash" escrito à mão (a carteira, o balcão, o motor e os títulos das
 // páginas). Esta trava reprova frase de tela com o nome velho escrito à mão: toda frase usa MARCA.moeda / MARCA.valor.
 import { describe, expect, it } from 'vitest'
+import { MARCA } from './marca'
 import paginaDaConta from '../index.html?raw'
 import paginaDoBalcao from '../balcao.html?raw'
 import paginaDaDemonstracao from '../demonstracao.html?raw'
@@ -44,5 +45,21 @@ describe('o nome dos pontos mora em src/marca.ts', () => {
     expect(frasesComONomeVelho("const t = 'Onde ganhar cashback'; // em cash")).toHaveLength(0)
     expect(frasesComONomeVelho('const h = `<b>${cash(emCash)}</b> no saldo`')).toHaveLength(0)
     expect(frasesComONomeVelho('const h = `<span>Cash que existe</span>`')).toHaveLength(1)
+  })
+})
+
+describe('o valor do jeito que ele fala: "você tem 20 de troco" (19/11)', () => {
+  it('número redondo sai sem centavos', () => {
+    expect(MARCA.valor(20)).toBe('20 de troco')
+    expect(MARCA.valor(30)).toBe('30 de troco')
+    expect(MARCA.valor(0)).toBe('0 de troco')
+  })
+  it('com centavos, mostra os centavos', () => {
+    expect(MARCA.valor(20.5)).toBe('20,50 de troco')
+    expect(MARCA.valor(9.99)).toBe('9,99 de troco')
+  })
+  it('a conta quebrada do computador não vira centavo fantasma', () => {
+    expect(MARCA.valor(0.1 + 0.2)).toBe('0,30 de troco')
+    expect(MARCA.valor(29.999999)).toBe('30 de troco')
   })
 })

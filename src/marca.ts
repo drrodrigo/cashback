@@ -19,8 +19,12 @@ export const MARCA = {
   /** A unidade, como aparece no meio da frase: "você tem 50,00 de troco". */
   moeda: 'troco',
 
-  /** Como o valor aparece escrito: 50,00 de troco. */
-  valor: (n: number) => `${n.toFixed(2).replace('.', ',')} de troco`,
+  /** Como o valor aparece escrito, do jeito que ele fala: "20 de troco"; com centavos só quando há ("20,50 de troco"). */
+  valor: (n: number) => {
+    const centavos = Math.round(n * 100)
+    const texto = centavos % 100 === 0 ? String(centavos / 100) : (centavos / 100).toFixed(2).replace('.', ',')
+    return `${texto} de troco`
+  },
 
   /** Reais, para o que é dinheiro de verdade -- custódia, depósito e saque. */
   reais: (n: number) => `R$ ${n.toFixed(2).replace('.', ',')}`,
