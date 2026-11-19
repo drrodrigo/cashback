@@ -355,7 +355,7 @@ export function darCashback(
 
   const multiplicador = opcoes.presencial ? estado.config.multiplicadorPresencial : 1
   const valor = arredondar((valorCompra * loja.cashbackPercentual) / 100 * multiplicador)
-  if (valor <= 0) throw new ErroDeRegra('Cashback calculado ficou em zero.')
+  if (valor <= 0) throw new ErroDeRegra(`O ${MARCA.moeda} calculado ficou em zero.`)
 
   const destino = opcoes.restrito ? contaRestrita(clienteId, lojaId) : contaAcumulo(clienteId)
   const prazo = opcoes.restrito ? estado.config.prazoRestritoDias : estado.config.prazoAcumuloDias
@@ -505,7 +505,7 @@ export function reciclar(estado: Estado, lojaId: string, valor: number, chave?: 
     de: contaRecebido(lojaId),
     para: contaCredito(lojaId),
     valor,
-    descricao: `Reciclou ${valor.toFixed(2)} para dar cashback de novo (sem taxa)`,
+    descricao: `Reciclou ${valor.toFixed(2)} para dar ${MARCA.moeda} de novo (sem taxa)`,
   })
   conferirInvariante(estado)
   return lancamento

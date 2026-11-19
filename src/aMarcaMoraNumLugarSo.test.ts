@@ -23,7 +23,36 @@ export function frasesComONomeVelho(fonte: string): string[] {
   return literais.filter((l) => /\s/.test(l) && /(?<![\w$.-])cash(?![\w._(-])/i.test(l))
 }
 
+/**
+ * Frases de tela com a PALAVRA "cashback" (19/11, à noite: *"troca o cashback para ele"*). O produto se chama Troco
+ * Prime e a unidade é "troco": a tela diz isso, lido de MARCA. Pega só a palavra solta no meio do texto (depois de espaço
+ * ou no começo da frase); não pega nome de função (`cash_balcao_dar_cashback`), coluna (`cashback_percentual`), chave
+ * (`cashback:${id}`) nem atributo (`data-acao="cashback"`).
+ */
+export function frasesComCashback(fonte: string): string[] {
+  const literais = semComentarios(fonte).match(/'[^'\n]*'|"[^"\n]*"|`[^`]*`/g) ?? []
+  return literais.filter((l) => /\s/.test(l) && /(^|\s)cashback(?=$|[\s.,!?;<])/im.test(l.slice(1, -1)))
+}
+
 describe('o nome dos pontos mora em src/marca.ts', () => {
+  it('nenhuma frase de tela escreve "cashback" à mão', () => {
+    const lidos = Object.entries(FONTES).filter(([f]) => !f.endsWith('.test.ts') && !f.endsWith('/marca.ts'))
+    const achados = lidos.flatMap(([f, fonte]) => frasesComCashback(fonte).map((l) => `${f}: ${l}`))
+    expect(achados).toEqual([])
+  })
+
+  it('a trava do "cashback" pega o caso de verdade (falsificada)', () => {
+    expect(frasesComCashback("const t = 'Onde ganhar cashback'")).toHaveLength(1)
+    expect(frasesComCashback('const r = `Cashback lançado para ${nome}.`')).toHaveLength(1)
+    expect(frasesComCashback('const b = `<button data-acao="cashback">Dar cashback</button>`')).toHaveLength(1)
+    // e não acusa o que não é frase de tela
+    expect(frasesComCashback("rpc('cash_balcao_dar_cashback', { p_x: 1 })")).toHaveLength(0)
+    expect(frasesComCashback('const k = `cashback:${id}:${Date.now()}`')).toHaveLength(0)
+    // a chave de idempotência de verdade (dados.ts), que tem espaço dentro e não é frase de tela
+    expect(frasesComCashback('const k = `cashback:${c}:${Math.random().toString(36).slice(2, 10)}`')).toHaveLength(0)
+    expect(frasesComCashback('const h = `<b data-acao="cashback">${l.cashback_percentual}% de volta</b>`')).toHaveLength(0)
+  })
+
   it('nenhuma frase de tela escreve "cash" à mão', () => {
     const lidos = Object.entries(FONTES).filter(([f]) => !f.endsWith('.test.ts') && !f.endsWith('/marca.ts'))
     expect(lidos.length).toBeGreaterThan(10) // leu os arquivos de verdade (e não uma lista vazia que passa sempre)

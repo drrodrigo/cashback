@@ -11,6 +11,8 @@
 // sai -- sem rede, sem banco, sem navegador de verdade.
 // ---------------------------------------------------------------------------
 
+import { MARCA } from '../marca'
+
 /** O que `public.cash_minha_carteira()` devolve. Uma linha, sempre. */
 export interface Carteira {
   cliente_id: string | null
@@ -88,7 +90,7 @@ export function fraseDoCiclo(c: Carteira, dinheiro: (n: number) => string): stri
     return `Você já pode transferir ${dinheiro(c.pode_transferir_ate)} para gastar.`
   }
   if (c.acumulado <= 0) {
-    return `Junte ${dinheiro(c.gatilho)} para poder gastar. Compre numa loja da rede e o cashback cai aqui.`
+    return `Junte ${dinheiro(c.gatilho)} para poder gastar. Compre numa loja da rede e o ${MARCA.moeda} cai aqui.`
   }
   return `Falta ${dinheiro(c.falta_para_liberar)} para você poder gastar.`
 }

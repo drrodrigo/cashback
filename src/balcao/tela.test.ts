@@ -92,7 +92,7 @@ describe('antes do balcão', () => {
   // decide é o banco a cada chamada.
   it('entrou e não é lojista: diz isso, e não mostra balcão nenhum', () => {
     const t = montar({ loja: null })
-    expect(texto(t)).toContain('Esta conta não tem loja no cashback')
+    expect(texto(t)).toContain('Esta conta não tem loja no Troco Prime')
     expect(texto(t)).not.toContain('Ler a carteirinha')
   })
 })
@@ -103,7 +103,7 @@ describe('a loja no balcão', () => {
     expect(texto(t)).toContain('Joalheria Sol')
     expect(texto(t)).toContain('Devolve 10%')
     expect(texto(t)).toContain('R$ 1.000,00')
-    expect(texto(t)).toContain('para dar de cashback')
+    expect(texto(t)).toContain('para dar de troco')
     expect(texto(t)).toContain('R$ 250,00')
   })
 
@@ -111,7 +111,7 @@ describe('a loja no balcão', () => {
   // vendedor tentar, não como erro vermelho na frente do cliente.
   it('crédito zerado avisa antes de alguém tentar atender', () => {
     const t = montar({ loja: { ...LOJA, credito: 0 } })
-    expect(texto(t)).toContain('Sem crédito para dar cashback')
+    expect(texto(t)).toContain('Sem crédito para dar troco')
   })
 
   it('o saque pedido aparece, e o botão oferece só o que sobrou', () => {
@@ -177,7 +177,7 @@ describe('o atendimento, depois de ler', () => {
   it('as duas opções vêm numa pílula, com a escolhida marcada', () => {
     const t = montar({ cliente: CLIENTE, modo: 'dar' })
     const p = [...t.querySelectorAll('.ca-escolha button')]
-    expect(p.map((b) => b.textContent)).toEqual(['Dar cashback', 'Cobrar'])
+    expect(p.map((b) => b.textContent)).toEqual(['Dar troco', 'Cobrar'])
     expect(p.map((b) => b.getAttribute('aria-pressed'))).toEqual(['true', 'false'])
   })
 

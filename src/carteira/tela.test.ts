@@ -69,17 +69,17 @@ describe('quem não entrou', () => {
 
   it('NÃO vê o botão de ativar antes de entrar', () => {
     // Botão que pede login para funcionar é meia porta: a pessoa toca e toma erro.
-    expect(botoes(montar({ logado: false, carteira: null }))).not.toContain('Ativar cashback')
+    expect(botoes(montar({ logado: false, carteira: null }))).not.toContain('Ativar o Troco Prime')
   })
 })
 
 describe('🔴 quem está logado mas não é do Clube', () => {
-  it('NÃO vê o botão "Ativar cashback" -- ele existiria só para falhar', () => {
+  it('NÃO vê o botão "Ativar o Troco Prime" -- ele existiria só para falhar', () => {
     // É a PORTA PINTADA NA PAREDE de 21/09: botão com rótulo, na posição certa,
     // que não leva a nada. Para estas contas (medido: ~1.180 das 5.083), ativar
     // levanta `precisa_ser_do_clube`.
     const t = montar({ carteira: carteira({ e_do_clube: false, aderiu: false }) })
-    expect(botoes(t)).not.toContain('Ativar cashback')
+    expect(botoes(t)).not.toContain('Ativar o Troco Prime')
   })
 
   it('vê o caminho de entrar no Clube, que é a resposta útil', () => {
@@ -92,7 +92,7 @@ describe('🔴 quem está logado mas não é do Clube', () => {
 describe('quem é do Clube e ainda não ativou', () => {
   it('vê o botão de ativar e a promessa certa: saldo zero, dados já cadastrados', () => {
     const t = montar({ carteira: carteira({ aderiu: false }) })
-    expect(botoes(t)).toContain('Ativar cashback')
+    expect(botoes(t)).toContain('Ativar o Troco Prime')
     expect(texto(t)).toContain('saldo zero')
     expect(texto(t)).toContain('não precisa preencher nada')
   })
@@ -110,7 +110,7 @@ describe('quem é do Clube e ainda não ativou', () => {
 
   it('o botão chama a ação de ativar', () => {
     const t = montar({ carteira: carteira({ aderiu: false }) })
-    const b = [...t.querySelectorAll('button')].find((x) => x.textContent === 'Ativar cashback')
+    const b = [...t.querySelectorAll('button')].find((x) => x.textContent === 'Ativar o Troco Prime')
     b!.click()
     expect(ACOES.ativar).toHaveBeenCalled()
   })

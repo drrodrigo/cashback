@@ -63,7 +63,7 @@ deu o crédito.
 
 ## O estado, e como conferir (não acredite neste arquivo)
 
-O banco está **no ar** desde 08/11: a gaveta `cash` e as 27 funções da fronteira
+O banco está **no ar** desde 08/11: a gaveta `cash` e as funções da fronteira (30 em 19/11)
 (`public.cash_*`). O que exatamente subiu, o nome de cada migration na produção e **o SQL da
 conferência** estão em [`supabase/APLICADO-NA-PRODUCAO.md`](supabase/APLICADO-NA-PRODUCAO.md).
 
@@ -76,7 +76,7 @@ arquivos na ordem e a produção não tinha a mesma ordem.
 
 ```bash
 npm install                 # na 1a vez precisa de --legacy-peer-deps (ver vitest.config.ts)
-npm test                    # 138 testes (o motor, as telas -- carteira, balcão, administrador -- e a trava do nome)
+npm test                    # 140 testes (o motor, as telas -- carteira, balcão, administrador -- e a trava do nome)
 npm run build               # com as VITE_*; sem elas o `assets/dados-*.js` sai com 2,8 kB
                             # em vez de 219 kB (olhe ESSE arquivo, não o index-*.js)
 npm run dev
@@ -179,7 +179,9 @@ migração de dado de gente:
     INPI e um advogado.
   - No código: `src/marca.ts` (nome "Troco Prime", unidade "troco", "30,00 de troco"). **Toda frase de tela lê o nome
     de lá**: em 19/11 havia 11 frases e 3 títulos com "cash" à mão, e a trava `src/aMarcaMoraNumLugarSo.test.ts`
-    (falsificada) reprova a próxima. Os nomes internos (a gaveta `cash`, `public.cash_*`, `valor_em_cash`) ficam: são do
+    (falsificada) reprova a próxima. E desde 19/11 à noite (*"troca o cashback para ele"*) a mesma trava reprova a
+    PALAVRA "cashback" em frase de tela: a tela diz "Ativar o Troco Prime", "Dar troco", "Lançar o troco", "Onde ganhar
+    troco". Nome de função, coluna e chave (`cash_balcao_dar_cashback`, `cashback_percentual`) ficam. Os nomes internos (a gaveta `cash`, `public.cash_*`, `valor_em_cash`) ficam: são do
     banco, não da tela.
 
 ## Decisões dele que ainda estão abertas

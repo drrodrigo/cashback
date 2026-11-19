@@ -53,7 +53,7 @@ export const supabase = faltaConfigurar
 
 /** A frase que a pessoa lê quando a fronteira recusa. */
 const FRASES: Record<string, string> = {
-  precisa_entrar: 'Entre na sua conta para ver o cashback.',
+  precisa_entrar: `Entre na sua conta para ver o seu ${MARCA.nome}.`,
   precisa_ser_do_clube: `A conta corrente de ${MARCA.moeda} é do membro do Clube Prime. Entre no Clube e volte aqui.`,
   gatilho_nao_alcancado: 'Você ainda não juntou o suficiente para transferir.',
   abaixo_do_minimo: 'A transferência tem um mínimo. Transfira pelo menos o valor indicado.',

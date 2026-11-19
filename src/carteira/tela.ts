@@ -146,7 +146,7 @@ function telaEntrar(acoes: Acoes, d: Dados): HTMLElement {
 
 function telaForaDoClube(): HTMLElement {
   const s = el('section', { classe: 'ca-cartao' })
-  s.appendChild(el('h2', { texto: 'O cashback é do Clube Prime' }))
+  s.appendChild(el('h2', { texto: `O ${MARCA.nome} é do Clube Prime` }))
   // NÃO desenha o botão de ativar: ele existiria só para falhar. É a porta
   // pintada na parede de 21/09 -- botão com rótulo, na posição certa, que não
   // leva a nada. Aqui a resposta útil é o caminho de entrar no Clube.
@@ -164,7 +164,7 @@ function telaForaDoClube(): HTMLElement {
 
 function telaAtivar(acoes: Acoes, d: Dados): HTMLElement {
   const s = el('section', { classe: 'ca-cartao' })
-  s.appendChild(el('h2', { texto: 'Ativar meu cashback' }))
+  s.appendChild(el('h2', { texto: `Ativar meu ${MARCA.nome}` }))
   s.appendChild(
     el('p', {
       texto:
@@ -179,7 +179,7 @@ function telaAtivar(acoes: Acoes, d: Dados): HTMLElement {
   )
   const botao = el('button', {
     classe: 'ca-botao',
-    texto: d.ocupado ? 'Ativando…' : 'Ativar cashback',
+    texto: d.ocupado ? 'Ativando…' : `Ativar o ${MARCA.nome}`,
   })
   botao.type = 'button'
   botao.disabled = d.ocupado
@@ -270,7 +270,7 @@ function blocoDoDisponivel(c: Carteira): HTMLElement | null {
 
 function blocoDasLojas(lojas: LojaDaRede[]): HTMLElement {
   const s = el('section', { classe: 'ca-cartao' })
-  s.appendChild(el('h2', { texto: 'Onde ganhar cashback' }))
+  s.appendChild(el('h2', { texto: `Onde ganhar ${MARCA.moeda}` }))
 
   const busca = el('input')
   busca.type = 'text'

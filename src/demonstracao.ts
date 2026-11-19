@@ -163,7 +163,7 @@ function painelLoja(): string {
         <div class="saldo">
           <span class="saldo-rotulo">Crédito</span>
           <span class="saldo-valor">${cash(credito)}</span>
-          <span class="saldo-nota">é daqui que sai o cashback</span>
+          <span class="saldo-nota">é daqui que sai o ${MARCA.moeda}</span>
         </div>
         <div class="saldo">
           <span class="saldo-rotulo">Recebido</span>
@@ -181,7 +181,7 @@ function painelLoja(): string {
         <button data-acao="depositar">Depositar</button>
       </div>
 
-      <h3>Venda com cashback</h3>
+      <h3>Venda com ${MARCA.moeda}</h3>
       <div class="linha">
         <div class="campo">
           <label for="cliente-cashback">Cliente</label>
@@ -195,7 +195,7 @@ function painelLoja(): string {
       <div class="linha">
         <label class="marcador"><input type="checkbox" id="presencial" checked> comprou na loja (vale o dobro)</label>
         <label class="marcador"><input type="checkbox" id="restrito"> só vale nesta loja</label>
-        <button data-acao="cashback">Dar cashback</button>
+        <button data-acao="cashback">Dar ${MARCA.moeda}</button>
       </div>
 
       <h3>Receber pagamento em ${MARCA.moeda}</h3>

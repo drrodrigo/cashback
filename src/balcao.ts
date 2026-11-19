@@ -141,7 +141,7 @@ const acoes: AcoesDoBalcao = {
       const c = dados.cliente
       if (!c) return
       await darCashback(c.cliente_id, valorDaCompra, c.validacao_id)
-      dados.recado = `Cashback lançado para ${c.nome}.`
+      dados.recado = `${MARCA.nome} lançado para ${c.nome}.`
       dados.cliente = null
       await carregar()
       void ligar()
