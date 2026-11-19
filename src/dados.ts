@@ -152,7 +152,7 @@ export async function transferir(valor: number): Promise<void> {
 }
 
 export async function lerLojas(busca = ''): Promise<LojaDaRede[]> {
-  const { data, error } = await cliente().rpc('cash_lojas_da_rede', { p_busca: busca })
+  const { data, error } = await cliente().rpc('cash_lojas_da_rede_com_regras', { p_busca: busca })
   if (error) throw error
   return (data as LojaDaRede[] | null) ?? []
 }

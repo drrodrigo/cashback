@@ -35,6 +35,8 @@ O QR Bio tem login próprio, então a ponte dele (`public.qrbio_troco*`, no `drr
   `cash.aderir_membro(uuid)`, `cash.descer_do_membro(uuid, numeric, text)`, `cash.cobrancas_do_membro(uuid)`,
   `cash.confirmar_do_membro(uuid, uuid, text)`, `cash.extrato_do_membro(uuid, integer)`, `cash.restritos_do_membro(uuid)`;
 - `public.cash_lojas_da_rede(p_busca text)` (`loja_id, nome, cashback_percentual, cidade, uf, catalogo_slug`).
+- `public.cash_lojas_da_rede_com_regras(p_busca text)` (`0024`, pedido dele em 19/11): as mesmas colunas, mais
+  `desconto_no_caixa`. A busca é a da irmã (ela lê a `cash_lojas_da_rede`). A nossa tela do cliente também usa esta.
 
 **Os códigos de erro que a ponte lê pelo texto** (`sqlerrm`): `precisa_ser_do_clube`, `gatilho_nao_alcancado`,
 `abaixo_do_minimo`, `saldo_insuficiente`, `valor_invalido`, `precisa_entrar`, `cobranca_nao_encontrada`,
@@ -63,7 +65,7 @@ deu o crédito.
 
 ## O estado, e como conferir (não acredite neste arquivo)
 
-O banco está **no ar** desde 08/11: a gaveta `cash` e as funções da fronteira (30 em 19/11)
+O banco está **no ar** desde 08/11: a gaveta `cash` e as funções da fronteira (32 em 19/11, contadas no banco vivo)
 (`public.cash_*`). O que exatamente subiu, o nome de cada migration na produção e **o SQL da
 conferência** estão em [`supabase/APLICADO-NA-PRODUCAO.md`](supabase/APLICADO-NA-PRODUCAO.md).
 
@@ -76,12 +78,12 @@ arquivos na ordem e a produção não tinha a mesma ordem.
 
 ```bash
 npm install                 # na 1a vez precisa de --legacy-peer-deps (ver vitest.config.ts)
-npm test                    # 194 testes (o motor, as telas, o /app e o /beta, a demonstração, a trava do nome e a das frases)
+npm test                    # 195 testes (o motor, as telas, o /app e o /beta, a demonstração, a trava do nome e a das frases)
 npm run build               # com as VITE_*; sem elas o `assets/dados-*.js` sai com 2,8 kB
                             # em vez de 219 kB (olhe ESSE arquivo, não o index-*.js)
 npm run dev
 
-bash scripts/banco-de-mentira.sh --testes   # 124 passos num Postgres descartável, de graça
+bash scripts/banco-de-mentira.sh --testes   # 127 passos num Postgres descartável, de graça
 ```
 
 ## O banco é COMPARTILHADO, e isso tem regras

@@ -229,7 +229,35 @@ begin
   v_ok := v_num = 10;
   r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end || 'o balcao da otica mostra os 10% de desconto no caixa' || E'\n';
   if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
   execute 'reset role';
+
+  -- 11b. O "Onde usar" do QR Bio (0024): a irmã da cash_lojas_da_rede devolve as mesmas lojas, na mesma ordem, mais o
+  -- desconto no caixa. Com CONFLITO: desconto 5 e troco 12 (com 10 e 10, coluna trocada passaria verde). E a busca é
+  -- SEM acento ("otica" acha "Ótica"): a regra da busca é a da irmã, num lugar só.
+  update cash.lojas set desconto_no_caixa = 5, cashback_percentual = 12 where id = v_loja_qr;
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claim.sub', u_qr::text, true);
+  select r2.desconto_no_caixa, r2.cashback_percentual into v_num, v_num2
+    from public.cash_lojas_da_rede_com_regras('otica') r2 where r2.loja_id = v_loja_qr;
+  v_ok := v_num = 5 and v_num2 = 12;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
+         || 'as lojas com regras mostram 5% de desconto no caixa + 12% de troco (' || coalesce(v_num::text,'nulo') || ' + ' || coalesce(v_num2::text,'nulo') || ')' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
+  select string_agg(x.loja_id::text, ',' order by x.n) into v_txt
+    from (select loja_id, row_number() over () as n from public.cash_lojas_da_rede('')) x;
+  select string_agg(x.loja_id::text, ',' order by x.n) into v_txt2
+    from (select loja_id, row_number() over () as n from public.cash_lojas_da_rede_com_regras('')) x;
+  v_ok := v_txt is not null and v_txt like '%,%' and v_txt = v_txt2;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end || 'as lojas com regras sao as mesmas, na mesma ordem (' || coalesce(array_length(string_to_array(v_txt2, ','), 1), 0) || ' lojas)' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+  execute 'reset role';
+
+  v_ok := not has_function_privilege('anon', 'public.cash_lojas_da_rede_com_regras(text)', 'execute')
+      and has_function_privilege('authenticated', 'public.cash_lojas_da_rede_com_regras(text)', 'execute');
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end || 'as lojas com regras: anon nao, authenticated sim' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
 
   -- 12. O vencimento diário está agendado (0021).
   select count(*) into v_n from cron.job where jobname = 'troco-prime-vencer' and command like '%cash.vencer_lotes()%';
