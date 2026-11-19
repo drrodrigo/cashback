@@ -295,3 +295,27 @@ describe('🔴 publicado sem as variáveis do banco', () => {
     expect(texto(t)).toContain('publicar de novo')
   })
 })
+
+describe('🔴 a cobrança da loja, para a pessoa confirmar (19/11)', () => {
+  const COBRANCA = { id: 'p1', loja_nome: 'Padaria Pão Quente', valor_compra: 80, valor_em_cash: 30, criado_em: '2026-11-19T14:00:00Z' }
+
+  it('aparece no alto, com a loja, o troco e a compra, e o Confirmar chama a ação com o id', async () => {
+    const confirmar = vi.fn(async () => {})
+    const onde = document.createElement('div')
+    desenhar(
+      onde,
+      { logado: true, carteira: carteira(), lojas: [], extrato: [], erro: null, ocupado: false, cobrancas: [COBRANCA] },
+      { ...ACOES, confirmar },
+    )
+    expect(texto(onde)).toContain('Padaria Pão Quente quer usar 30 de troco numa compra de R$ 80,00.')
+    expect(texto(onde)).toContain('Não foi você? Não confirme e fale com a loja.')
+    const primeiroCartao = onde.querySelector('section')
+    expect(primeiroCartao?.textContent).toContain('quer usar')
+    ;[...onde.querySelectorAll('button')].find((b) => b.textContent === 'Confirmar')!.click()
+    expect(confirmar).toHaveBeenCalledWith('p1')
+  })
+
+  it('sem cobrança, não aparece cartão nenhum de cobrança', () => {
+    expect(texto(montar({ cobrancas: [] }))).not.toContain('quer usar')
+  })
+})

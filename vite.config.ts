@@ -32,6 +32,10 @@ export default defineConfig({
         // O ADMINISTRADOR (19/11): vincular o lojista do Catálogo ou do QR Único, registrar o depósito dele, pagar
         // o saque e conferir que a conta da rede fecha. Só abre para quem o banco diz que é administrador.
         admin: resolve(__dirname, 'admin.html'),
+        // O APLICATIVO no navegador (19/11): o mesmo do celular, com a escolha cliente / loja / administração.
+        app: resolve(__dirname, 'app.html'),
+        // O aplicativo em DEMONSTRAÇÃO, para ele testar sem encostar em dinheiro de ninguém.
+        beta: resolve(__dirname, 'beta.html'),
       },
     },
   },

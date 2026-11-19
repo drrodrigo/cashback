@@ -121,7 +121,7 @@ describe('o gatilho e o relógio', () => {
     darCashback(estado, 'padaria', 'ana', 100) // 10, abaixo do gatilho de 30
 
     expect(podeDescer(estado, 'ana')).toBe(false)
-    expect(() => descerParaGastar(estado, 'ana', 10)).toThrow(/gatilho/)
+    expect(() => descerParaGastar(estado, 'ana', 10)).toThrow(/o mínimo é 30/)
   })
 
   it('deixa o cliente escolher quanto desce, e só o que desceu ganha prazo curto', () => {

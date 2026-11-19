@@ -4,6 +4,8 @@
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/admin", "destination": "/admin.html" },
+    { "source": "/app", "destination": "/app.html" },
+    { "source": "/beta", "destination": "/beta.html" },
     { "source": "/balcao", "destination": "/balcao.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],

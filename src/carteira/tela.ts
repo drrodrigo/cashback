@@ -18,6 +18,7 @@ import {
   type Carteira,
   type Lancamento,
   type LojaDaRede,
+  type CobrancaDoCliente,
 } from './estado'
 
 export interface Acoes {
@@ -25,6 +26,8 @@ export interface Acoes {
   ativar(): Promise<void>
   transferir(valor: number): Promise<void>
   sair(): Promise<void>
+  /** Confirma a cobrança que a loja pediu no balcão (19/11). */
+  confirmar?(cobrancaId: string): Promise<void>
 }
 
 export interface Dados {
@@ -34,6 +37,8 @@ export interface Dados {
   carteira: Carteira | null
   lojas: LojaDaRede[]
   extrato: Lancamento[]
+  /** As cobranças de loja esperando ela confirmar (19/11). */
+  cobrancas?: CobrancaDoCliente[]
   /** Mensagem de erro para mostrar, se a última ação falhou. */
   erro: string | null
   ocupado: boolean
@@ -69,6 +74,34 @@ function aviso(texto: string): HTMLElement {
   const p = el('p', { classe: 'ca-erro', texto })
   p.setAttribute('role', 'alert')
   return p
+}
+
+/**
+ * 🔴 A COBRANÇA DA LOJA, no alto da conta. O balcão só PEDE: o troco sai da conta quando a pessoa toca em "Confirmar",
+ * com os dois números à vista (a compra e o troco). Até 19/11 esta tela não tinha isso, e só o cartão do QR Bio
+ * confirmava: quem usasse o site do Troco Prime ficava com a cobrança parada.
+ */
+function blocoDasCobrancas(cobrancas: CobrancaDoCliente[], acoes: Acoes, d: Dados): HTMLElement | null {
+  if (cobrancas.length === 0 || !acoes.confirmar) return null
+  const s = el('section', { classe: 'ca-cartao ca-cobranca-cliente' })
+  s.setAttribute('role', 'alert')
+  s.appendChild(el('h2', { texto: cobrancas.length === 1 ? 'Uma loja quer usar o seu troco' : 'Lojas querem usar o seu troco' }))
+  for (const c of cobrancas) {
+    const p = el('p', {
+      texto: `${c.loja_nome} quer usar ${MARCA.valor(Number(c.valor_em_cash))} numa compra de ${emReaisCurto(Number(c.valor_compra))}.`,
+    })
+    const confirmar = el('button', { classe: 'ca-botao', texto: d.ocupado ? 'Confirmando…' : 'Confirmar' })
+    confirmar.type = 'button'
+    confirmar.disabled = d.ocupado
+    confirmar.addEventListener('click', () => void acoes.confirmar?.(c.id))
+    s.append(p, confirmar)
+  }
+  s.appendChild(el('p', { classe: 'ca-dica', texto: 'Não foi você? Não confirme e fale com a loja.' }))
+  return s
+}
+
+function emReaisCurto(n: number): string {
+  return `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 // --- os cinco estados ---------------------------------------------------------
@@ -353,6 +386,8 @@ export function desenhar(onde: HTMLElement, d: Dados, acoes: Acoes): void {
   }
 
   const c = tela.carteira
+  const cobrancas = blocoDasCobrancas(d.cobrancas ?? [], acoes, d)
+  if (cobrancas) onde.appendChild(cobrancas)
   onde.appendChild(blocoDoCiclo(c, acoes, d))
   const disponivel = blocoDoDisponivel(c)
   if (disponivel) onde.appendChild(disponivel)

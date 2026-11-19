@@ -76,7 +76,7 @@ arquivos na ordem e a produção não tinha a mesma ordem.
 
 ```bash
 npm install                 # na 1a vez precisa de --legacy-peer-deps (ver vitest.config.ts)
-npm test                    # 148 testes (o motor, as telas -- carteira, balcão, administrador -- e a trava do nome)
+npm test                    # 194 testes (o motor, as telas, o /app e o /beta, a demonstração, a trava do nome e a das frases)
 npm run build               # com as VITE_*; sem elas o `assets/dados-*.js` sai com 2,8 kB
                             # em vez de 219 kB (olhe ESSE arquivo, não o index-*.js)
 npm run dev
@@ -229,3 +229,35 @@ migração de dado de gente:
 6. ~~O vencimento automático~~: **feito em 19/11**, rotina `troco-prime-vencer` (04:11 em Brasília). Falta o **aviso** de
    vencimento (7 e 2 dias): precisa de um canal (push do QR Bio, WhatsApp ou e-mail).
 7. O primeiro parceiro de verdade (zero loja, zero cliente em 19/11).
+8. 🔴 **A loja vinculada pelo Catálogo ou pelo QR Único NÃO lê a carteirinha do Clube** (medido em 19/11, no banco vivo):
+   `cash_balcao_ler_carteirinha` chama `clube.ler_carteirinha(parceiro, token)`, e o Clube só deixa ler o **dono de um
+   parceiro ATIVO do Clube** (`clube.parceiros.dono_id = auth.uid()`, `ativo`). A loja que nasceu no `/admin` pelo
+   Catálogo ou pelo QR Único não tem `clube_parceiro_id`: o balcão dela dá `loja_sem_carteirinha` (desde 19/11 com frase
+   de gente). Medido: 45 parceiros no Clube, 9 ativos, 4 com dono. Conserto depende do Clube (`drrodrigo/clubeprime`):
+   ou a loja do Troco Prime vira parceira do Clube ao ser vinculada, ou o Clube dá uma leitura para a loja do Troco Prime.
+
+## O aplicativo: `/app` e `/beta` (19/11)
+
+Ele, sobre o Aviso de Entrega: *"a gente fez um /app (...) o app mesmo que o cliente pode entrar por ali (...) se der
+algum problema ou sair uma atualização (...) ele pode entrar pela web e usar. E aí a gente fez também o app beta (...)
+você vai me mostrando e eu vou testando e vou te falando o que mudar"*.
+
+- **`/app`** (`app.html`, `src/app.ts`): o aplicativo de verdade, no navegador, com o banco. Entrada com três portas
+  (**Sou cliente do Clube / Sou loja / Administração**), e cada uma abre a MESMA tela do site (`src/telas/montar.ts`:
+  `montarConta`, `montarBalcao`, `montarAdmin`). No computador, uma coluna de celular no meio.
+- **`/beta`** (`beta.html`, `src/beta.ts`): o mesmo aplicativo em **modo demonstração**, sem banco: os dados ficam no
+  navegador (`localStorage`, `trocoprime:demonstracao:v1`) e o dinheiro anda pelo motor `src/nucleo/livro.ts`, com os
+  MESMOS códigos de erro do banco (`src/demonstracao/repositorio.ts`). Faixa "Modo demonstração" com **Passar 30 dias**
+  (vence o que tem de vencer) e **Recomeçar**.
+- **Contas de teste do `/beta`** (senha `123456`, ou um toque em "Entrar como"): `ana@trocoprime.teste` (cliente sem
+  ativar), `bruno@trocoprime.teste` (cliente com 40 juntados), `otica@trocoprime.teste` (QR Único, 10% só troco),
+  `padaria@trocoprime.teste` (Catálogo, 10% de desconto no caixa + 10% de troco), `admin@trocoprime.teste`. No balcão,
+  "Ler a carteirinha de Ana/Bruno" faz o papel da câmera.
+- 🔴 **Toda tela tem a setinha de voltar** no topo, à esquerda (regra dele, 18/11, no Aviso de Entrega: *"todo aplicativo
+  tem que ter setinha em cima pra voltar. Aprende, é regra."*). Trava em `src/app/casca.test.ts`.
+- **A ponte entre tela e dados é `src/repositorio.ts`** (`Repositorio`): `repositorioDoBanco` (o `dados.ts`) ou
+  `criarDemonstracao(papel)`. Tela nova fala com o `Repositorio`, nunca direto com o `dados.ts`, senão some do `/beta`.
+- **Regra que mora em dois lugares**: a demonstração imita as travas do banco. Mudou uma regra de dinheiro no banco, muda
+  no motor (`livro.ts`) e o teste da demonstração (`src/demonstracao/repositorio.test.ts`) tem de continuar verde.
+- **Todo código de erro do banco tem frase** em `FRASES` (`src/dados.ts`): a trava `src/frasesDoBanco.test.ts` lê cada
+  `raise exception` das migrations e reprova o código que chegaria cru na tela (falsificada).

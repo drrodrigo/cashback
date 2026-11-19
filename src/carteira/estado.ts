@@ -42,6 +42,19 @@ export interface LojaDaRede {
   clube_parceiro_id: string | null
 }
 
+/**
+ * Uma cobrança de loja esperando a pessoa confirmar (`public.cash_minhas_cobrancas`). É o "Pix" do Troco Prime: o
+ * balcão pede, e só sai troco da conta quando ELA confirma.
+ */
+export interface CobrancaDoCliente {
+  id: string
+  loja_nome: string
+  valor_compra: number
+  /** Quanto de troco a loja quer usar (o nome da coluna é do banco). */
+  valor_em_cash: number
+  criado_em: string
+}
+
 export interface Lancamento {
   em: string
   tipo: string
