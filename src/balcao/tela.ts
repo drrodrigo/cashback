@@ -164,11 +164,11 @@ function telaEntrar(acoes: AcoesDoBalcao, d: DadosDoBalcao): HTMLElement {
  */
 function telaNaoEhLojista(): HTMLElement {
   const s = el('section', { classe: 'ca-cartao' })
-  s.appendChild(el('h2', { texto: 'Esta conta não tem loja no cashback' }))
+  s.appendChild(el('h2', { texto: `Esta conta não tem loja no ${MARCA.nome}` }))
   s.appendChild(
     el('p', {
       texto:
-        'O balcão é de quem tem loja na rede. Se a sua loja já é parceira, peça para ligarem o cashback nela.',
+        `O balcão é de quem tem loja na rede. Se a sua loja já é parceira, peça para ligarem o ${MARCA.nome} nela.`,
     }),
   )
   const ir = el('a', { classe: 'ca-botao', texto: 'Ver minha carteira' })
@@ -190,7 +190,7 @@ function cartaoDaLoja(loja: MinhaLoja, acoes: AcoesDoBalcao, d: DadosDoBalcao): 
   linha.appendChild(
     el('div', { classe: 'ca-numero' }, [
       el('strong', { texto: emReais(loja.credito) }),
-      el('span', { texto: 'para dar de cashback' }),
+      el('span', { texto: `para dar de ${MARCA.moeda}` }),
     ]),
   )
   linha.appendChild(
@@ -208,7 +208,7 @@ function cartaoDaLoja(loja: MinhaLoja, acoes: AcoesDoBalcao, d: DadosDoBalcao): 
   if (loja.credito <= 0) {
     s.appendChild(
       aviso(
-        'Sem crédito para dar cashback. Fale com a plataforma para depositar antes de atender.',
+        `Sem crédito para dar ${MARCA.moeda}. Fale com a plataforma para depositar antes de atender.`,
         'recado',
       ),
     )
@@ -296,13 +296,13 @@ function cartaoDoAtendimento(
     b.addEventListener('click', () => acoes.escolher(modo))
     return b
   }
-  pilula.append(fazerBotao('dar', 'Dar cashback'), fazerBotao('cobrar', 'Cobrar'))
+  pilula.append(fazerBotao('dar', `Dar ${MARCA.moeda}`), fazerBotao('cobrar', 'Cobrar'))
   s.appendChild(pilula)
 
   if (d.modo === 'dar') {
     const { volta, entrada } = campo('Valor da compra', 'R$ 0,00')
     const previa = el('p', { classe: 'ca-dica', texto: ' ' })
-    const lancar = el('button', { classe: 'ca-botao', texto: 'Lançar o cashback' })
+    const lancar = el('button', { classe: 'ca-botao', texto: `Lançar o ${MARCA.moeda}` })
     lancar.disabled = true
 
     const recalcular = () => {
@@ -312,7 +312,7 @@ function cartaoDoAtendimento(
         valor === null
           ? 'Digite o valor da compra.'
           : `${cliente.nome} ganha ${emReais(rende)} de ${MARCA.moeda} nesta compra.`
-      lancar.textContent = valor === null ? 'Lançar o cashback' : `Lançar ${emReais(rende)}`
+      lancar.textContent = valor === null ? `Lançar o ${MARCA.moeda}` : `Lançar ${emReais(rende)}`
       lancar.disabled = d.ocupado || valor === null || rende <= 0 || rende > loja.credito
       if (valor !== null && rende > loja.credito) {
         previa.textContent = `Faltou crédito: a loja tem ${emReais(loja.credito)} para dar.`
