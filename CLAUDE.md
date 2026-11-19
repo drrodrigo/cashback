@@ -132,8 +132,10 @@ migração de dado de gente:
     pagamento".
   - 🟢 **Escolhido em 19/11: TROCO PRIME** (*"faz sentido"*, à recomendação). "Troco" é o que volta da compra, todo
     brasileiro entende, sem cara de cripto nem de banco; "Troco Prime" junto é registrável (só "troco" seria palavra
-    comum). Na frase do balcão: *"você tem 30 de troco; paga 70 e usa o troco"*. O domínio **trocoprime.com.br estava
-    LIVRE** em 19/11 (RDAP do registro.br); registrar custa ~R$ 40/ano e só com o OK dele. Antes de imprimir: a busca no
+    comum). Na frase do balcão: *"você tem 30 de troco; paga 70 e usa o troco"*. O domínio **trocoprime.com.br foi
+    REGISTRADO por ele em 19/11** (registro.br; titular Rodrigo Rodrigues; DNS ainda os do registro.br, `a/b.auto.dns.br`;
+    no dia, "aguardando ativação", o pagamento). Apontar para o site (Vercel) é pôr no ar: só com o OK dele, quando o
+    projeto da Vercel existir. O `detroco.com.br` (o "de troco" da fala) ficou livre e sem registro. Antes de imprimir: a busca no
     INPI e um advogado.
   - No código: `src/marca.ts` (nome "Troco Prime", unidade "troco", "30,00 de troco"). **Toda frase de tela lê o nome
     de lá**: em 19/11 havia 11 frases e 3 títulos com "cash" à mão, e a trava `src/aMarcaMoraNumLugarSo.test.ts`
