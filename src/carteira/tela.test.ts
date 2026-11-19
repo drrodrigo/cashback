@@ -119,7 +119,7 @@ describe('quem é do Clube e ainda não ativou', () => {
 describe('🔴 o ciclo dos 30, que é o motor do produto', () => {
   it('com zero juntado, convida a juntar e NÃO oferece transferir', () => {
     const t = montar({ carteira: carteira({ acumulado: 0, falta_para_liberar: 30 }) })
-    expect(texto(t)).toContain('Junte 30,00 de troco')
+    expect(texto(t)).toContain('Junte 30 de troco')
     expect(botoes(t)).not.toContain('Transferir para gastar')
   })
 
@@ -129,7 +129,7 @@ describe('🔴 o ciclo dos 30, que é o motor do produto', () => {
     // vê não apressa ninguém. Este caso tem CONFLITO: 20 não é 0 nem 30, então
     // ele distingue o cálculo de um número fixo.
     const t = montar({ carteira: carteira({ acumulado: 20, falta_para_liberar: 10 }) })
-    expect(texto(t)).toContain('Falta 10,00 de troco')
+    expect(texto(t)).toContain('Falta 10 de troco')
     expect(botoes(t)).not.toContain('Transferir para gastar')
   })
 
@@ -138,7 +138,7 @@ describe('🔴 o ciclo dos 30, que é o motor do produto', () => {
       carteira: carteira({ acumulado: 40, falta_para_liberar: 0, pode_descer: true, pode_transferir_ate: 40 }),
     })
     expect(botoes(t)).toContain('Transferir para gastar')
-    expect(texto(t)).toContain('Mínimo de 30,00 de troco')
+    expect(texto(t)).toContain('Mínimo de 30 de troco')
     const campo = t.querySelector('input[type="number"]') as HTMLInputElement
     expect(campo.min).toBe('30')
     expect(campo.max).toBe('40')
@@ -245,7 +245,7 @@ describe('o extrato', () => {
     const t = montar({
       extrato: [{ em: '2026-10-05', tipo: 'cashback', valor: 20, valor_compra: 200, descricao: 'Joalheria Sol: compra de R$ 200,00' }],
     })
-    expect(texto(t)).toContain('20,00 de troco')
+    expect(texto(t)).toContain('20 de troco')
     expect(texto(t)).toContain('Joalheria Sol')
   })
 })
