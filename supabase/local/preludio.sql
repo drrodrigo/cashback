@@ -58,6 +58,47 @@ create table if not exists public.lojas (
   slug text unique
 );
 
+-- 19/11: as colunas do Catálogo que a tela do administrador lê (busca, cidade, UF, o desconto do Clube) e o que
+-- tira loja apagada e loja de teste da busca. Tipos iguais aos da produção, conferidos em 19/11.
+alter table public.lojas add column if not exists endereco_cidade text;
+alter table public.lojas add column if not exists endereco_uf text;
+alter table public.lojas add column if not exists excluida_em timestamptz;
+alter table public.lojas add column if not exists loja_teste boolean not null default false;
+alter table public.lojas add column if not exists clube_desconto_percentual numeric;
+
+-- 19/11: o `auth.users` de verdade é do Supabase. O dublê tem só o que o balcão do QR Único confere: o e-mail e se
+-- ele foi CONFIRMADO (é essa confirmação que impede alguém de criar conta com o e-mail do lojista).
+create table if not exists auth.users (
+  id uuid primary key,
+  email varchar,
+  email_confirmed_at timestamptz
+);
+
+-- 19/11: o QR Único, de onde vem o lojista que não tem Catálogo. Nomes e tipos da produção (conferidos em 19/11):
+-- 1.297 usuários-empresa ativos, login PRÓPRIO (nenhum id igual ao `auth.users`).
+create schema if not exists qrunico;
+create table if not exists qrunico.users (
+  id uuid primary key default gen_random_uuid(),
+  name varchar not null,
+  nickname varchar not null default '',
+  email varchar not null,
+  is_company boolean not null default false,
+  active boolean not null default true,
+  is_removed boolean not null default false
+);
+create table if not exists qrunico.qr_card (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null,
+  is_active boolean not null default true,
+  city varchar,
+  uf varchar,
+  created_at timestamp not null default now()
+);
+
+-- O agendador: na produção o `pg_cron` existe (49 rotinas em 19/11). Aqui é a extensão de mentira que o
+-- `banco-de-mentira.sh` escreve no disco antes de plantar.
+create extension if not exists pg_cron;
+
 -- Na produção estas duas vêm do Supabase e do Catálogo. Aqui são dublês, e o
 -- `auth.uid()` é regulável para o teste poder VESTIR um lojista e um cliente --
 -- teste de permissão que roda como superusuário não mede permissão nenhuma.

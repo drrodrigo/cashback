@@ -44,6 +44,10 @@ Em 08/11 as **56 funções** bateram (na terceira volta: as duas primeiras achar
 | `cash_0016_devolve_o_conserto_que_eu_desfiz` + `cash_0017_as_portas_outra_vez` | `0016` | **conserto de um erro meu**: ver abaixo |
 | `cash_0018_o_mapa_volta_a_agrupar_por_cidade` | `0010` | a terceira coisa que o mesmo erro derrubou: o mapa ordenava por cidade |
 | `cash_0019_as_regras_por_socio` (19/11) | `0019` | as regras do cliente viram internas "por sócio" (`cash.*_do_membro`), fechadas; as 7 `public.cash_*` do cliente viram uma linha que chama a interna com `auth.uid()`. É a porta do QR Bio (`qrbio_troco_*`, no `drrodrigo/qrbio.me`). Antes de subir, o miolo vivo das 7 bateu com o copiado; depois, as 14 bateram com o arquivo (md5) e as portas ficaram como eram (públicas: `authenticated` sim, `anon` não; internas: só `service_role`) |
+| `cash_0020a_o_elo_com_o_qrunico_e_a_busca` (19/11) | `0020` | `cash.lojas` ganha `qrunico_usuario_id` e `dono_email`; a busca do administrador no Catálogo e no QR Único; vincular empresa do QR Único |
+| `cash_0020b_lojas_do_admin_e_o_balcao_do_qrunico` (19/11) | `0020` | a loja do Catálogo passa a vir com cidade/UF; `cash_admin_lojas()`; `cash.loja_do_usuario()` abre o balcão do QR Único para a conta com o mesmo e-mail **confirmado** |
+| `cash_0020c_cidade_sem_espaco` (19/11) | `0020` | conserto achado na produção: o QR Único guarda `"Belo Horizonte "` e `"MG "`; a busca e o vínculo tiram o espaço (o mapa agrupa por cidade). Depois de subir, os 5 miolos bateram com o banco de mentira (md5) |
+| `cash_0021_vencer_todo_dia` (19/11) | `0021` | a rotina `troco-prime-vencer` (`11 7 * * *` UTC = 04:11 em Brasília) roda `cash.vencer_lotes()` todo dia |
 
 ## 🔴 As três lições que esta aplicação custou
 
