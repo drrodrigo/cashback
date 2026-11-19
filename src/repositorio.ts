@@ -13,6 +13,7 @@
 import type { Carteira, CobrancaDoCliente, Lancamento, LojaDaRede } from './carteira/estado'
 import type { Cliente, Cobranca, MinhaLoja } from './balcao/estado'
 import type { Achado, LojaAdmin, Painel, SaquePedido } from './admin/estado'
+import type { CarteirinhaDoClube, QrDaCarteirinha } from './carteirinha/estado'
 import * as banco from './dados'
 
 export interface Repositorio {
@@ -34,6 +35,10 @@ export interface Repositorio {
   lerExtrato(): Promise<Lancamento[]>
   lerMinhasCobrancas(): Promise<CobrancaDoCliente[]>
   confirmarCobranca(id: string): Promise<void>
+  /** A carteirinha do Clube de quem está logado; `null` para quem não é do Clube. */
+  minhaCarteirinha(): Promise<CarteirinhaDoClube | null>
+  /** O QR de 90 s que a loja lê. */
+  qrDaCarteirinha(): Promise<QrDaCarteirinha>
 
   // o balcão
   lerMinhaLoja(): Promise<MinhaLoja | null>
@@ -73,6 +78,8 @@ export const repositorioDoBanco: Repositorio = {
   lerExtrato: banco.lerExtrato,
   lerMinhasCobrancas: banco.lerMinhasCobrancas,
   confirmarCobranca: banco.confirmarCobranca,
+  minhaCarteirinha: banco.lerMinhaCarteirinha,
+  qrDaCarteirinha: banco.pedirQrDaCarteirinha,
   lerMinhaLoja: banco.lerMinhaLoja,
   lerCarteirinha: banco.lerCarteirinha,
   darCashback: banco.darCashback,

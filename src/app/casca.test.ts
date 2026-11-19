@@ -3,7 +3,7 @@
 // O APLICATIVO MONTADO (/app e /beta), lido como ele lê: as três portas, a setinha em toda tela, as contas de teste e a
 // carteirinha de teste. As telas de dentro são as do site, já testadas cada uma no seu arquivo.
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { CARTEIRINHA_NO_QR_BIO, montarCasca } from './casca'
+import { montarCasca } from './casca'
 import { CARTEIRINHAS_DE_TESTE, criarDemonstracao, type Armazem } from '../demonstracao/repositorio'
 import { repositorioDoBanco } from '../repositorio'
 
@@ -68,12 +68,26 @@ describe('as contas de teste do /beta', () => {
     await vi.waitFor(() => expect(texto(raiz)).toContain('Devolve 10% em troco a cada compra.'))
   })
 
-  it('o cliente vê a carteirinha de teste com o código que o balcão lê', async () => {
+  it('o cliente vê a carteirinha; tocar abre a folha com o QR que o balcão lê, e a setinha fecha', async () => {
     const { raiz, casca } = beta()
     casca.ir('cliente')
     botaoQueDiz(raiz, 'Entrar como Ana Souza')!.click()
-    await vi.waitFor(() => expect(texto(raiz)).toContain('A carteirinha de Ana Souza'))
-    expect(texto(raiz)).toContain(CARTEIRINHAS_DE_TESTE.ana)
+    await vi.waitFor(() => expect(texto(raiz)).toContain('CPAN A000 01'))
+    expect(texto(raiz)).toContain('ANA SOUZA')
+    raiz.querySelector<HTMLButtonElement>('button.ct-cartao')!.click()
+    const folha = await vi.waitFor(() => {
+      const f = document.querySelector<HTMLElement>('.ct-folha')
+      expect(f?.querySelector('.ct-qr svg')).toBeTruthy()
+      return f!
+    })
+    // O QR leva o token que o balcão do /beta lê pelo atalho "Ler a carteirinha de Ana".
+    expect(folha.querySelector<HTMLElement>('.ct-qr')!.dataset.token).toBe(CARTEIRINHAS_DE_TESTE.ana)
+    expect(texto(folha)).toContain('Ler a carteirinha de Ana')
+    // Fechar desfaz o passo do histórico que a folha criou (o "voltar" do celular fecha a folha, não o aplicativo).
+    const voltou = new Promise((ok) => window.addEventListener('popstate', ok, { once: true }))
+    folha.querySelector<HTMLButtonElement>('.app-seta')!.click()
+    expect(document.querySelector('.ct-folha')).toBeNull()
+    await voltou
   })
 
   it('a loja lê a carteirinha do Bruno pelo atalho e atende', async () => {
@@ -89,7 +103,7 @@ describe('as contas de teste do /beta', () => {
 })
 
 describe('o /app de verdade', () => {
-  it('não tem contas de teste nem faixa de demonstração, e o cliente acha a carteirinha no QR Bio', () => {
+  it('não tem contas de teste nem faixa de demonstração', () => {
     const raiz = document.createElement('div')
     document.body.replaceChildren(raiz)
     const casca = montarCasca(raiz, {
@@ -99,7 +113,6 @@ describe('o /app de verdade', () => {
     expect(texto(raiz)).not.toContain('Modo demonstração')
     casca.ir('cliente')
     expect(texto(raiz)).not.toContain('Contas de teste')
-    const link = raiz.querySelector<HTMLAnchorElement>(`a[href="${CARTEIRINHA_NO_QR_BIO}"]`)
-    expect(link?.textContent).toBe('Abrir a minha carteirinha no QR Bio')
+    expect(raiz.querySelector('.app-seta')).not.toBeNull()
   })
 })
