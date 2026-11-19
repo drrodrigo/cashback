@@ -22,6 +22,7 @@ import type { Carteira, CobrancaDoCliente, Lancamento, LojaDaRede } from './cart
 import type { Cliente, Cobranca, MinhaLoja } from './balcao/estado'
 import type { Achado, LojaAdmin, Painel, SaquePedido } from './admin/estado'
 import type { CarteirinhaDoClube, QrDaCarteirinha } from './carteirinha/estado'
+import type { Recarga, RecargaAdmin, RecargaCriada } from './recarga/estado'
 import { MARCA } from './marca'
 
 // `.trim()` porque copiar-e-colar em painel de deploy quase sempre traz um
@@ -87,6 +88,13 @@ const FRASES: Record<string, string> = {
   qr_invalido: 'Esse QR não é de uma carteirinha do Clube Prime.',
   carteirinha_inativa: 'A carteirinha desse cliente está desligada no Clube Prime.',
   loja_nao_autorizada: 'Esta conta não é de uma loja ativa do Clube Prime.',
+  // A recarga por Pix (19/11, 0027).
+  recarga_abaixo_do_minimo: 'A recarga mínima é de R$ 100,00.',
+  recargas_demais: 'Já tem Pix esperando pagamento. Pague o que está aberto, ou espere uns minutos para gerar outro.',
+  recarga_nao_encontrada: 'Essa recarga não existe mais. A lista foi atualizada.',
+  so_servidor: 'Só o sistema confirma o pagamento do Pix.',
+  pix_desligado: 'O Pix automático ainda não está ligado. Fale com a administração do Troco Prime.',
+  pix_falhou: 'O Mercado Pago não gerou o Pix agora. Tente de novo em instantes.',
 }
 
 /**
@@ -372,4 +380,43 @@ export async function pedirQrDaCarteirinha(): Promise<QrDaCarteirinha> {
   const linha = (data as QrDaCarteirinha[] | null)?.[0]
   if (!linha) throw new Error('precisa_ser_do_clube')
   return linha
+}
+
+/**
+ * A recarga por Pix (19/11). Quem cria o Pix é a função de borda `troco-recarga` (ela tem o token do Mercado Pago, o
+ * navegador não): ela pede a recarga com o login da loja, cria o Pix e devolve o copia-e-cola.
+ */
+export async function pedirRecarga(valor: number): Promise<RecargaCriada> {
+  const { data, error } = await cliente().functions.invoke('troco-recarga', { body: { valor } })
+  if (error) {
+    let codigo = 'pix_falhou'
+    try {
+      const corpo = (await (error as { context?: Response }).context?.json()) as { erro?: string } | undefined
+      if (corpo?.erro) codigo = corpo.erro
+    } catch {
+      /* sem corpo: fica o genérico */
+    }
+    throw new Error(codigo)
+  }
+  const resposta = data as (RecargaCriada & { erro?: string }) | null
+  if (!resposta || resposta.erro) throw new Error(resposta?.erro ?? 'pix_falhou')
+  return resposta
+}
+
+export async function lerMinhasRecargas(): Promise<Recarga[]> {
+  const { data, error } = await cliente().rpc('cash_minhas_recargas')
+  if (error) throw error
+  return (data as Recarga[] | null) ?? []
+}
+
+export async function lerRecargasDoAdmin(): Promise<RecargaAdmin[]> {
+  const { data, error } = await cliente().rpc('cash_admin_recargas')
+  if (error) throw error
+  return (data as RecargaAdmin[] | null) ?? []
+}
+
+export async function confirmarRecarga(id: string): Promise<string> {
+  const { data, error } = await cliente().rpc('cash_admin_confirmar_recarga', { p_recarga: id })
+  if (error) throw error
+  return String(data ?? '')
 }

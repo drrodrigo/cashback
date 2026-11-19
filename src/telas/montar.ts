@@ -15,6 +15,7 @@ import { emReais, regraEmTexto } from '../admin/estado'
 import { extrairToken } from '../lib/token'
 import { ligarCamera, type EstadoDaCamera, type Leitor } from '../balcao/leitorQr'
 import { abrirFolhaDoQr, type Folha } from '../carteirinha/tela'
+import { abrirFolhaDeRecarga, type FolhaDeRecarga } from '../recarga/folha'
 
 /** O que a montagem devolve: repintar quando os dados mudarem por fora, e desmontar ao sair da tela. */
 export interface Montada {
@@ -130,6 +131,8 @@ export function montarConta(onde: HTMLElement, repo: Repositorio, opcoes: Opcoes
 export interface OpcoesDoBalcao {
   /** Sem câmera (a demonstração no computador): só o campo de digitar o código, e os atalhos de teste. */
   semCamera?: boolean
+  /** Só no /beta: o botão que faz o papel do Mercado Pago avisando que o Pix foi pago. */
+  simularPix?: (recargaId: string) => Promise<string>
 }
 
 export interface BalcaoMontado extends Montada {
@@ -138,6 +141,7 @@ export interface BalcaoMontado extends Montada {
 }
 
 export function montarBalcao(onde: HTMLElement, repo: Repositorio, opcoes: OpcoesDoBalcao = {}): BalcaoMontado {
+  let folhaDaRecarga: FolhaDeRecarga | null = null
   const dados: DadosDoBalcao = {
     faltaConfigurar: repo.faltaConfigurar,
     logado: false,
@@ -269,6 +273,20 @@ export function montarBalcao(onde: HTMLElement, repo: Repositorio, opcoes: Opcoe
       dados.modo = modo
       pintar()
     },
+    abrirRecarga: () => {
+      if (folhaDaRecarga) return
+      folhaDaRecarga = abrirFolhaDeRecarga({
+        repo,
+        simularPix: opcoes.simularPix,
+        aoCreditar: () => {
+          dados.recado = 'Crédito na conta. Já dá para dar troco.'
+          void recarregar()
+        },
+        aoFechar: () => {
+          folhaDaRecarga = null
+        },
+      })
+    },
     video: null,
   }
 
@@ -316,6 +334,7 @@ export function montarBalcao(onde: HTMLElement, repo: Repositorio, opcoes: Opcoe
     lerCodigo,
     desmontar: () => {
       montado = false
+      folhaDaRecarga?.fechar()
       pararCamera()
       document.removeEventListener('visibilitychange', aoMudarVisibilidade)
       onde.replaceChildren()
@@ -350,6 +369,8 @@ export function montarAdmin(onde: HTMLElement, repo: Repositorio): Montada {
       dados.painel = painel
       dados.lojas = lojas
       dados.saques = saques
+      // As recargas vêm à parte: se a função ainda não existir no banco, o resto da administração continua de pé.
+      dados.recargas = await repo.lerRecargas().catch(() => undefined)
       dados.naoEAdmin = false
     } catch (e) {
       if (repo.eSoAdmin(e)) {
@@ -443,6 +464,26 @@ export function montarAdmin(onde: HTMLElement, repo: Repositorio): Montada {
           await repo.pagarSaque(id)
           dados.recado = 'Saque marcado como pago.'
         } finally {
+          await recarregarDados()
+        }
+      }),
+    prepararRecarga: (id) => {
+      dados.recargaAConfirmar = id
+      pintar()
+    },
+    cancelarRecarga: () => {
+      dados.recargaAConfirmar = null
+      pintar()
+    },
+    confirmarRecarga: () =>
+      tentar(async () => {
+        const id = dados.recargaAConfirmar
+        if (!id) return
+        try {
+          const r = await repo.confirmarRecarga(id)
+          dados.recado = r === 'ja_paga' ? 'Essa recarga já estava paga.' : 'Recarga confirmada: o crédito entrou na loja.'
+        } finally {
+          dados.recargaAConfirmar = null
           await recarregarDados()
         }
       }),

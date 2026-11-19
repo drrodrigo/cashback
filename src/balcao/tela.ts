@@ -37,6 +37,8 @@ export interface AcoesDoBalcao {
   pedirSaque(valor: number): Promise<void>
   limparAtendimento(): void
   escolher(modo: ModoDoAtendimento): void
+  /** Abre a folha "Adicionar crédito" (a recarga por Pix, 19/11). */
+  abrirRecarga?(): void
   /** Onde pendurar o vídeo da câmera, quando houver. */
   video?: HTMLVideoElement | null
 }
@@ -210,10 +212,24 @@ function cartaoDaLoja(loja: MinhaLoja, acoes: AcoesDoBalcao, d: DadosDoBalcao): 
   if (loja.credito <= 0) {
     s.appendChild(
       aviso(
-        `Sem crédito para dar ${MARCA.moeda}. Fale com a plataforma para depositar antes de atender.`,
+        acoes.abrirRecarga
+          ? `Sem crédito para dar ${MARCA.moeda}. Toque em "Adicionar crédito" e faça um Pix (mínimo R$ 100,00).`
+          : `Sem crédito para dar ${MARCA.moeda}. Fale com a plataforma para depositar antes de atender.`,
         'recado',
       ),
     )
+  }
+
+  // A RECARGA POR PIX (19/11): a loja põe o próprio crédito, sem esperar ninguém. Com crédito zerado, o botão é o
+  // principal da tela; com crédito, fica discreto.
+  if (acoes.abrirRecarga) {
+    const recarregar = el('button', {
+      classe: loja.credito <= 0 ? 'ca-botao' : 'ca-botao-fraco',
+      texto: 'Adicionar crédito',
+    })
+    recarregar.type = 'button'
+    recarregar.addEventListener('click', () => acoes.abrirRecarga!())
+    s.appendChild(recarregar)
   }
 
   if (loja.saque_pedido > 0) {

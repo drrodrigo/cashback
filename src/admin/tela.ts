@@ -9,6 +9,7 @@
 // toque errado no celular não pode virar R$ 3.000 de troco.
 // ---------------------------------------------------------------------------
 
+import { situacaoDaRecarga, type RecargaAdmin } from '../recarga/estado'
 import { tituloComIcone } from '../lib/marcaNaTela'
 import { MARCA } from '../marca'
 import {
@@ -40,6 +41,10 @@ export interface AcoesDoAdmin {
   pagarSaque(id: string): Promise<void>
   recusarSaque(id: string): Promise<void>
   vencerAgora(): Promise<void>
+  /** A recarga por Pix que não teve aviso: primeiro pergunta "caiu mesmo?", depois credita (19/11). */
+  prepararRecarga?(id: string): void
+  confirmarRecarga?(): Promise<void>
+  cancelarRecarga?(): void
 }
 
 export interface DepositoPendente {
@@ -58,6 +63,10 @@ export interface DadosDoAdmin {
   achados: Achado[] | null
   lojas: LojaAdmin[]
   saques: SaquePedido[]
+  /** As recargas por Pix das lojas, com a taxa do Mercado Pago (19/11). */
+  recargas?: RecargaAdmin[]
+  /** A recarga que o administrador vai confirmar na mão (o segundo passo). */
+  recargaAConfirmar?: string | null
   depositoPendente: DepositoPendente | null
   erro: string | null
   recado: string | null
@@ -411,6 +420,71 @@ function cartaoDosSaques(acoes: AcoesDoAdmin, d: DadosDoAdmin): HTMLElement {
   return s
 }
 
+/**
+ * AS RECARGAS POR PIX (19/11). A loja paga e o crédito entra sozinho; aqui o administrador VÊ cada uma e, quando o
+ * Mercado Pago já disse, quanto cobrou de taxa (a resposta do "depois você me fala qual que é a taxa"). Se o aviso do
+ * Mercado Pago não chegar, "Confirmar na mão" credita, em dois passos, como o depósito.
+ */
+function cartaoDasRecargas(acoes: AcoesDoAdmin, d: DadosDoAdmin): HTMLElement | null {
+  if (!d.recargas) return null
+  const s = el('section', { classe: 'ca-cartao' })
+  s.appendChild(el('h2', { texto: 'Recargas por Pix' }))
+  if (d.recargas.length === 0) {
+    s.appendChild(el('p', { classe: 'ca-dica', texto: 'Nenhuma loja fez recarga ainda.' }))
+    return s
+  }
+  const pagas = d.recargas.filter((r) => r.situacao === 'paga' && r.taxa_do_provedor !== null)
+  if (pagas.length) {
+    const recebido = pagas.reduce((t, r) => t + Number(r.valor_pago ?? r.valor), 0)
+    const taxa = pagas.reduce((t, r) => t + Number(r.taxa_do_provedor ?? 0), 0)
+    const pct = recebido > 0 ? ((taxa / recebido) * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) : '0'
+    s.appendChild(
+      el('p', {
+        classe: 'ca-frase',
+        texto: `O Mercado Pago cobrou ${emReais(taxa)} de taxa em ${emReais(recebido)} recebidos (${pct}%).`,
+      }),
+    )
+  } else {
+    s.appendChild(
+      el('p', { classe: 'ca-dica', texto: 'A taxa do Mercado Pago aparece aqui depois do primeiro Pix pago.' }),
+    )
+  }
+  const lista = el('ul', { classe: 'ca-lista' })
+  for (const r of d.recargas.slice(0, 15)) {
+    const dia = new Date(r.criada_em).toLocaleDateString('pt-BR')
+    const partes = [`${emReais(r.valor)} · ${dia} · ${situacaoDaRecarga(r)}`]
+    if (r.situacao === 'paga' && r.taxa_do_provedor !== null) {
+      partes.push(`taxa ${emReais(Number(r.taxa_do_provedor))} · caiu ${emReais(Number(r.valor_liquido ?? 0))}`)
+    }
+    if (r.situacao === 'valor_divergente' && r.valor_pago !== null) partes.push(`pagou ${emReais(Number(r.valor_pago))}`)
+    if (r.confirmada_por?.startsWith('admin')) partes.push('confirmada na mão')
+    const li = el('li', { classe: 'ca-achado' }, [
+      el('strong', { texto: r.loja_nome }),
+      el('span', { classe: 'ca-dica', texto: partes.join(' · ') }),
+    ])
+    const aberta = r.situacao === 'aguardando' || r.situacao === 'valor_divergente'
+    if (aberta && acoes.prepararRecarga) {
+      if (d.recargaAConfirmar === r.id) {
+        const sim = botao(`Sim, creditar ${emReais(r.valor)} na ${r.loja_nome}`)
+        sim.disabled = d.ocupado
+        sim.addEventListener('click', () => void acoes.confirmarRecarga?.())
+        const nao = botao('Cancelar', 'ca-link')
+        nao.addEventListener('click', () => acoes.cancelarRecarga?.())
+        li.appendChild(el('p', { classe: 'ca-frase', texto: `O Pix de ${emReais(r.valor)} da ${r.loja_nome} caiu mesmo na conta?` }))
+        li.appendChild(el('div', { classe: 'ca-acao' }, [sim, nao]))
+      } else {
+        const mao = botao('Confirmar na mão', 'ca-botao-fraco')
+        mao.disabled = d.ocupado
+        mao.addEventListener('click', () => acoes.prepararRecarga!(r.id))
+        li.appendChild(mao)
+      }
+    }
+    lista.appendChild(li)
+  }
+  s.appendChild(lista)
+  return s
+}
+
 function cartaoDoVencimento(acoes: AcoesDoAdmin, d: DadosDoAdmin): HTMLElement {
   const s = el('section', { classe: 'ca-cartao' })
   s.appendChild(el('h2', { texto: 'Vencimento' }))
@@ -458,5 +532,7 @@ export function desenharAdmin(onde: HTMLElement, d: DadosDoAdmin, acoes: AcoesDo
   onde.appendChild(cartaoDaBusca(acoes, d))
   onde.appendChild(cartaoDasLojas(acoes, d))
   onde.appendChild(cartaoDosSaques(acoes, d))
+  const recargas = cartaoDasRecargas(acoes, d)
+  if (recargas) onde.appendChild(recargas)
   onde.appendChild(cartaoDoVencimento(acoes, d))
 }

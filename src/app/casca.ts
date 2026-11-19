@@ -243,7 +243,10 @@ export function montarCasca(raiz: HTMLElement, opcoes: OpcoesDaCasca): Casca {
     }
     if (rota === 'admin') montada = montarAdmin(tela, repo)
     if (rota === 'loja') {
-      const b = montarBalcao(tela, repo, { semCamera: demo })
+      const b = montarBalcao(tela, repo, {
+        semCamera: demo,
+        simularPix: demo ? (id) => (opcoes.repos.loja as Demonstracao).simularPixPago(id) : undefined,
+      })
       montada = b
       const atalhos = atalhosDoBalcao(b)
       if (atalhos) coluna.insertBefore(atalhos, tela)
