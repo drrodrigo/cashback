@@ -127,7 +127,7 @@ function painelConferencia(): string {
         <span class="medida-valor">${reais(estado.custodia)}</span>
       </div>
       <div class="medida">
-        <span class="medida-rotulo">Cash que existe</span>
+        <span class="medida-rotulo">${MARCA.moeda.charAt(0).toUpperCase() + MARCA.moeda.slice(1)} que existe</span>
         <span class="medida-valor">${cash(emCash)}</span>
       </div>
       <div class="medida">
@@ -139,7 +139,7 @@ function painelConferencia(): string {
         <span class="${fecha ? 'selo-ok' : 'selo-erro'}">${fecha ? '✓ bate certinho' : '✗ NÃO BATE'}</span>
       </div>
       <div class="saldo-nota" style="flex:1 1 220px">
-        Cada cash que existe é um real depositado por algum lojista. Se essas duas colunas
+        Cada ${MARCA.moeda} que existe é um real depositado por algum lojista. Se essas duas colunas
         se separarem, alguém sacaria dinheiro que não existe — por isso a conferência fica aqui em cima.
       </div>
     </section>`

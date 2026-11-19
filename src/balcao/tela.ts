@@ -183,7 +183,7 @@ function cartaoDaLoja(loja: MinhaLoja, acoes: AcoesDoBalcao, d: DadosDoBalcao): 
   const s = el('section', { classe: 'ca-cartao' })
   s.appendChild(el('h2', { texto: loja.nome }))
   s.appendChild(
-    el('p', { classe: 'ca-dica', texto: `Devolve ${loja.cashback_percentual}% em cash a cada compra.` }),
+    el('p', { classe: 'ca-dica', texto: `Devolve ${loja.cashback_percentual}% em ${MARCA.moeda} a cada compra.` }),
   )
 
   const linha = el('div', { classe: 'ca-numeros' })
@@ -311,7 +311,7 @@ function cartaoDoAtendimento(
       previa.textContent =
         valor === null
           ? 'Digite o valor da compra.'
-          : `${cliente.nome} ganha ${emReais(rende)} de cash nesta compra.`
+          : `${cliente.nome} ganha ${emReais(rende)} de ${MARCA.moeda} nesta compra.`
       lancar.textContent = valor === null ? 'Lançar o cashback' : `Lançar ${emReais(rende)}`
       lancar.disabled = d.ocupado || valor === null || rende <= 0 || rende > loja.credito
       if (valor !== null && rende > loja.credito) {
@@ -328,7 +328,7 @@ function cartaoDoAtendimento(
     s.append(volta, previa, lancar)
   } else {
     const compra = campo('Valor da compra', 'R$ 0,00')
-    const emCash = campo('Quanto em cash', 'R$ 0,00')
+    const emCash = campo(`Quanto em ${MARCA.moeda}`, 'R$ 0,00')
     const previa = el('p', { classe: 'ca-dica', texto: ' ' })
     const cobrar = el('button', { classe: 'ca-botao', texto: 'Pedir confirmação' })
     cobrar.disabled = true
@@ -365,7 +365,7 @@ function cartaoDoAtendimento(
     s.appendChild(
       el('p', {
         classe: 'ca-dica',
-        texto: 'O cliente confirma no celular dele. Só depois o cash sai da conta.',
+        texto: `O cliente confirma no celular dele. Só depois o ${MARCA.moeda} sai da conta.`,
       }),
     )
   }
@@ -386,7 +386,7 @@ function cartaoDasCobrancas(cobrancas: Cobranca[]): HTMLElement | null {
       el('li', {}, [
         el('strong', { texto: c.cliente_nome }),
         el('span', {
-          texto: ` ${emReais(c.valor_em_cash)} de cash numa compra de ${emReais(c.valor_compra)}`,
+          texto: ` ${emReais(c.valor_em_cash)} de ${MARCA.moeda} numa compra de ${emReais(c.valor_compra)}`,
         }),
         el('span', { classe: 'ca-quando', texto: dataCurta(c.criado_em) }),
       ]),

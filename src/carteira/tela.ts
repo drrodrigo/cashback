@@ -153,7 +153,7 @@ function telaForaDoClube(): HTMLElement {
   s.appendChild(
     el('p', {
       texto:
-        'Esta conta ainda não é membro do Clube Prime, e a conta corrente de cash é do membro. Entre no Clube e volte aqui.',
+        `Esta conta ainda não é membro do Clube Prime, e a conta corrente de ${MARCA.moeda} é do membro. Entre no Clube e volte aqui.`,
     }),
   )
   const link = el('a', { classe: 'ca-botao', texto: 'Entrar no Clube Prime' })
@@ -168,7 +168,7 @@ function telaAtivar(acoes: Acoes, d: Dados): HTMLElement {
   s.appendChild(
     el('p', {
       texto:
-        'Sua conta corrente de cash começa com saldo zero. A cada compra numa loja da rede, o valor do desconto entra aqui em vez de sair do preço.',
+        `Sua conta corrente de ${MARCA.moeda} começa com saldo zero. A cada compra numa loja da rede, o valor do desconto entra aqui em vez de sair do preço.`,
     }),
   )
   s.appendChild(
