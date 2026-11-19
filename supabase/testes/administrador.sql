@@ -22,6 +22,7 @@ declare
   v_uid uuid;
   v_num2 numeric;
   v_cli uuid;
+  v_uid_n int;
 
   u_dono_cat uuid := 'a1111111-1111-1111-1111-111111111111';
   u_qr       uuid := 'a2222222-2222-2222-2222-222222222222';  -- a conta do Supabase do dono da ótica (confirmada)
@@ -257,6 +258,24 @@ begin
   v_ok := not has_function_privilege('anon', 'public.cash_lojas_da_rede_com_regras(text)', 'execute')
       and has_function_privilege('authenticated', 'public.cash_lojas_da_rede_com_regras(text)', 'execute');
   r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end || 'as lojas com regras: anon nao, authenticated sim' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+
+  -- 11c. A lista para o mapa (0026): só as lojas ATIVAS, com os elos e as regras; fechada para quem não é serviço.
+  update cash.lojas set ativa = false where id = v_loja_cat;
+  select count(*) filter (where m.loja_id = v_loja_qr and m.origem = 'qrunico' and m.desconto_no_caixa = 5 and m.cashback_percentual = 12),
+         count(*) filter (where m.loja_id = v_loja_cat)
+    into v_n, v_uid_n
+    from cash.lojas_para_o_mapa() m;
+  v_ok := v_n = 1 and v_uid_n = 0;
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end
+         || 'a lista do mapa traz a otica (QR Unico, 5% + 12%) e NAO traz a loja desligada (' || v_n || ', ' || v_uid_n || ')' || E'\n';
+  if v_ok is not true then v_falhas := v_falhas + 1; end if;
+  update cash.lojas set ativa = true where id = v_loja_cat;
+
+  v_ok := not has_function_privilege('anon', 'cash.lojas_para_o_mapa()', 'execute')
+      and not has_function_privilege('authenticated', 'cash.lojas_para_o_mapa()', 'execute')
+      and has_function_privilege('service_role', 'cash.lojas_para_o_mapa()', 'execute');
+  r := r || case when v_ok then '[ok]     ' else '[FALHOU] ' end || 'a lista do mapa: so service_role (anon e logado nao)' || E'\n';
   if v_ok is not true then v_falhas := v_falhas + 1; end if;
 
   -- 12. O vencimento diário está agendado (0021).
