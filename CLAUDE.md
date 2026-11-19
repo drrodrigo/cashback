@@ -97,14 +97,37 @@ migração de dado de gente:
 - **Modo autônomo:** pesquise, escreva a spec, execute tudo sem parar para perguntar, e volte
   quando terminar, com o relatório do que foi testado. Pare só em bloqueio real.
 
+## O que ele decidiu em 19/11 (na conversa do QR Bio)
+
+> *"O Clube Prime, ele oferece desconto (...) é 10% de desconto. E aí a gente tem um Clube de Oferta Prime, que é acima de
+> 15% de desconto. E boa parte disso aí, a ideia era transformar isso em cashback, ou seja (...) ele paga o 100, tá? E
+> recebe 20 reais dentro da conta do cashback, que seria uma carteira (...) seria em pontos. Aí ele poderia pegar esse
+> dinheiro e comprar em outras lojas (...) ele tem que chegar a 30 para poder gastar (...) Chegou em 30, 40, 50, ele libera
+> e gasta, e aí ele junta de novo."*
+
+- **O percentual é o DESCONTO DO CLUBE, da loja inteira** (não por produto): o Clube Prime dá 10%, o Clube de Ofertas Prime
+  15% ou mais. Em vez de abater, a loja cobra o preço cheio e devolve o percentual em pontos (paga 100, ganha 20). É o
+  percentual da LOJA que já existe no motor.
+- **Ponto = R$ 1**, e se fala **"pontos"** (na voz dele: *"seria em pontos"*). Dois saldos: o que **junta** (travado) e o
+  que **libera** para gastar, a partir de **30** (pode esperar 40, 50), em qualquer loja da rede; depois volta a juntar. É
+  a regra que o motor já tem.
+- **A porta do cliente é o QR Bio** (a captação do Clube): a conta do cashback aparece ao lado da carteirinha. A escada
+  inteira (QR Bio → QR Único → Catálogo) está em `drrodrigo/qrbio`, `docs/2026-11-19-a-escada.md`.
+- **O nome:** "QR Cash" ele achou registrado; ele pensou em **"QR Coin"**, e pediu para ver a legalidade.
+  - Medido em 19/11: **"QR Coin" já é o nome de uma criptomoeda** (o token `$QR` da rede Base, listado no CoinGecko, sem
+    contrato auditado), e "QR Capital" é uma gestora de criptoativos grande no Brasil. O nome puxa para cripto, que é
+    justamente o que este programa NÃO é.
+  - A regra do §7 do desenho continua: **o que mantém isto como programa de fidelidade são os fatos** (o cliente não compra
+    pontos com dinheiro, não saca, não transfere), e na comunicação se fala **"pontos"**, nunca "moeda" ou "meio de
+    pagamento".
+  - O nome continua "cash" no código (`src/marca.ts`) até ele escolher. Antes de imprimir: busca no INPI e um advogado.
+
 ## Decisões dele que ainda estão abertas
 
-- **Cashback por produto ou geral?** *"Aí tem que decidir ainda com o lojista."* Hoje existe só
-  o percentual da LOJA. Modelar o por-produto antes da decisão é inventar a regra dele.
+- **O nome dos pontos** (acima).
 - **A sobra conta para o ciclo seguinte?** Quem junta 45 e transfere 30 fica com 15. Hoje esses
-  15 contam para os próximos 30.
-- **O nome da moeda** continua "cash".
-- **Quais 3–5 parceiros começam, e com qual percentual.**
+  15 contam para os próximos 30 (a fala de 19/11, *"ele tem que estar sempre juntando"*, combina com isso).
+- **Quais 3–5 parceiros começam** (o percentual é o do Clube: 10% no Prime, 15%+ no de Ofertas).
 
 ## O que falta para alguém usar
 
