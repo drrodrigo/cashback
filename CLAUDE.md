@@ -1,16 +1,30 @@
-# CLAUDE.md — Cashback
+# CLAUDE.md — Troco Prime
 
 > **Este repositório nasceu em 08/11/2026**, por `git subtree split` da pasta `cash/` do
 > [`drrodrigo/catologoonline`](https://github.com/drrodrigo/catologoonline), guardando os 10
 > commits de história. O motivo foi dele: *"eu quero separado do catálogo pq tá aumentando meu
 > custo que toda vez que atualiza um atualiza o outro e eu pago mais caro"*.
+>
+> **Em 19/11 virou `drrodrigo/trocoprime`** (antes `drrodrigo/cashback`; o GitHub redireciona o nome antigo), a pedido
+> dele: *"troca o cashback para ele e vamos começar a vida nova"*. O projeto da Vercel virou `trocoprime`, e o site é
+> **trocoprime.com.br**. Os nomes internos do banco (`cash.*`, `public.cash_*`) ficam como estão.
 
-## 🔴 Quem cuida (19/11)
+## 🔴 Quem cuida (19/11, à noite)
 
-**A conversa do QR Bio** (`drrodrigo/qrbio`), a pedido dele: *"você vai ser o cashback, você vai ser o Troco Prime"*. O
-produto continua SEPARADO (este repositório, a gaveta `cash`, `trocoprime.com.br`); a conversa é uma só porque **a porta
-do cliente é o QR Bio** (a conta ao lado da carteirinha do Clube). O mapa dos produtos: `drrodrigo/qrbio`,
-`docs/O-CAMINHO.md`.
+**A conversa própria do Troco Prime** (a que nasceu como "Resumo decisões Troco Prime"), a pedido dele: *"pode usar o
+repositório cashback nesta conversa"*. Ela cuida deste repositório, da gaveta `cash` (`cash.*` e `public.cash_*`), do
+balcão, dos lojistas e do domínio.
+
+**A conversa do QR Bio** (`drrodrigo/qrbio`) cuida do perfil e da carteirinha do Clube Prime, e **mostra** o saldo do Troco
+Prime ao lado da carteirinha, pela fronteira `public.cash_*`. Ela não muda `cash.*` nem `public.cash_*`: quando precisar de
+função nova, pede para a conversa do Troco Prime. (Antes, ainda em 19/11, a ordem tinha sido o contrário: *"você vai ser o
+Troco Prime"*, dito à conversa do QR Bio. A de agora é a que vale.)
+
+**O que o Troco Prime é, na voz dele (19/11):** *"O Troco Prime, ele é uma composição do Clube Prime. Ele é um gerenciamento
+do desconto do Clube Prime. Então, a pessoa, para ter o Troco Prime, ela tem que fazer parte do Clube Prime. E o perfil, a
+carteirinha do Clube Prime, é gerida pelo QR Bio."* E: *"uma conta corrente (...) adicionar e subtrair saldo (...) funcionando
+como se fosse um Pix"* — entre o cliente e a loja; o saldo **não** passa de uma pessoa para outra (é o que mantém isto como
+programa de fidelidade). O mapa dos produtos: `drrodrigo/qrbio`, `docs/O-CAMINHO.md`.
 
 ## O que é
 
@@ -160,8 +174,11 @@ migração de dado de gente:
 > A passagem inteira da conversa antiga: [`docs/2026-11-19-passagem-do-cashback-prime.md`](docs/2026-11-19-passagem-do-cashback-prime.md).
 
 1. ~~A tela do balcão~~: feita em 08/11 (`balcao.html`).
-2. ~~O projeto da Vercel~~: **existe desde 08/11**, `cashback`, https://cashback-snowy.vercel.app (com as `VITE_`; em 19/11
-   mostra "Troco Prime"). O domínio **trocoprime.com.br** ainda não aponta para ele (pôr no ar: só com o OK dele).
+2. ~~O projeto da Vercel~~: **existe desde 08/11**; em 19/11 passou de `cashback` para **`trocoprime`**
+   (https://cashback-snowy.vercel.app continua valendo). O OK dele para o domínio veio em 19/11 (*"vamos usar ele"*):
+   **trocoprime.com.br** e **www** (este redireciona para o sem www) já estão **cadastrados no projeto**. Falta o
+   apontamento no registro.br, que só ele faz: `A @ 216.150.1.1` e `CNAME www 5ec964930b98043b.vercel-dns-016.com`.
+   Conferir de fora: `curl -s "https://dns.google/resolve?name=trocoprime.com.br&type=A"`.
 3. O item "Meu cashback" no Clube Prime: **feito e mesclado** (`drrodrigo/clubeprime` #104, 08/11), **não publicado**
    (esperando "publica o clube"). Agora que a porta é o QR Bio, decidir se ele continua, e se passa a dizer "Troco Prime".
 4. **A porta no QR Bio** (19/11): as regras por sócio (`0017`) e a ponte `qrbio_troco_*` (`drrodrigo/qrbio.me`), prontas e
