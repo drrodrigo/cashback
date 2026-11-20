@@ -102,6 +102,23 @@ describe('as contas de teste do /beta', () => {
   })
 })
 
+describe('a recarga por Pix no /beta', () => {
+  it('a loja toca em "Adicionar crédito", a folha abre com a setinha e o mínimo de R$ 100', async () => {
+    const { raiz, casca } = beta()
+    casca.ir('loja')
+    botaoQueDiz(raiz, 'Entrar como Ótica Visão')!.click()
+    await vi.waitFor(() => expect(botaoQueDiz(raiz, 'Adicionar crédito')).toBeDefined())
+    botaoQueDiz(raiz, 'Adicionar crédito')!.click()
+    const folha = document.querySelector<HTMLElement>('.rc-folha')!
+    expect(folha.querySelector('.app-seta')?.getAttribute('aria-label')).toBe('Voltar')
+    expect(texto(folha)).toContain('Mínimo de R$ 100,00')
+    const voltou = new Promise((ok) => window.addEventListener('popstate', ok, { once: true }))
+    folha.querySelector<HTMLButtonElement>('.app-seta')!.click()
+    expect(document.querySelector('.rc-folha')).toBeNull()
+    await voltou
+  })
+})
+
 describe('o /app de verdade', () => {
   it('não tem contas de teste nem faixa de demonstração', () => {
     const raiz = document.createElement('div')
