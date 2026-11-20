@@ -65,7 +65,7 @@ deu o crédito.
 
 ## O estado, e como conferir (não acredite neste arquivo)
 
-O banco está **no ar** desde 08/11: a gaveta `cash` e as funções da fronteira (34 em 19/11, contadas no banco vivo)
+O banco está **no ar** desde 08/11: a gaveta `cash` e as funções da fronteira (40 em 19/11, contadas no banco vivo)
 (`public.cash_*`). O que exatamente subiu, o nome de cada migration na produção e **o SQL da
 conferência** estão em [`supabase/APLICADO-NA-PRODUCAO.md`](supabase/APLICADO-NA-PRODUCAO.md).
 
@@ -78,12 +78,12 @@ arquivos na ordem e a produção não tinha a mesma ordem.
 
 ```bash
 npm install                 # na 1a vez precisa de --legacy-peer-deps (ver vitest.config.ts)
-npm test                    # 212 testes (o motor, as telas, o /app e o /beta, a carteirinha, a logo, a demonstração, as travas)
+npm test                    # 230 testes (o motor, as telas, o /app e o /beta, a carteirinha, a logo, a recarga, a demonstração, as travas)
 npm run build               # com as VITE_*; sem elas o `assets/dados-*.js` sai com 2,8 kB
                             # em vez de 219 kB (olhe ESSE arquivo, não o index-*.js)
 npm run dev
 
-bash scripts/banco-de-mentira.sh --testes   # 137 passos num Postgres descartável, de graça
+bash scripts/banco-de-mentira.sh --testes   # 147 passos num Postgres descartável, de graça
 ```
 
 ## O banco é COMPARTILHADO, e isso tem regras
@@ -276,5 +276,21 @@ você vai me mostrando e eu vou testando e vou te falando o que mudar"*.
   `MARCA.icone` e `MARCA.logo`. A moedinha 🪙 que era o ícone do navegador saiu: a trava `src/icone.test.ts`
   (falsificada) reprova a página que voltar a ter moeda ou ficar sem o ícone. A logo é de imagem (PNG); para gráfica e
   placa, pedir a versão em vetor (SVG).
+- **A recarga da loja por Pix (19/11, `0027`).** Ele: *"para ele dar o troco, ele tem que ter saldo (...) ele tem que
+  pagar por esse troco (...) pelo menos os R$ 100 para começar (...) esse Pix cai na conta dele"*, e *"Vamos montar no
+  automático"*. No balcão, **"Adicionar crédito"** abre a folha (`src/recarga/folha.ts`): R$ 100/200/500 ou outro valor
+  (mínimo **R$ 100**, `cash.parametros.recarga_minima` E `RECARGA_MINIMA` em `src/recarga/estado.ts`: regra em dois
+  lugares), o QR e o "copia e cola", e a folha pergunta de 4 em 4 s se caiu. O Pix é do **Mercado Pago**, na conta da casa
+  (`MERCADOPAGO_ACCESS_TOKEN`, a mesma do Catálogo e do Mapps; `TROCO_MP_TOKEN`, se existir, tem preferência). Caminho:
+  `troco-recarga` (borda) pede a recarga COM O LOGIN DA LOJA (`cash_pedir_recarga`), cria o Pix e guarda a cobrança como
+  servidor; o Mercado Pago avisa a `troco-pix-webhook`, que **confere na fonte** (GET `/v1/payments/<id>` com o nosso
+  token) e dá a baixa (`cash_servidor_baixa_da_recarga`, crédito CHEIO pelo `cash.depositar` com chave `recarga:<id>`).
+  🔴 As `cash_servidor_*` estão na fronteira (a varredura abre ao logado), mas recusam quem não é o servidor
+  (`cash.e_servidor`): é o que impede o lojista de se dar crédito (falsificado no `supabase/testes/recarga.sql`). A
+  **taxa do Mercado Pago** de cada recarga (`fee_details`, `net_received_amount`) fica guardada, e o `/admin` mostra o
+  total ("O Mercado Pago cobrou R$ X de taxa em R$ Y recebidos"): página oficial diz 0,99% no Pix de checkout. A loja
+  recebe o crédito cheio; a taxa fica com a casa. **Aberto:** a mensalidade da loja (ele quer cobrar; pode embutir a taxa).
+  No `/admin`, "Confirmar na mão" (dois passos) para quando o aviso não chegar. No `/beta`, "Simular o Pix pago".
+  Publicar as funções com `verify_jwt: false` e com `supabase/functions/_troco/mercadopago.ts` como `../_troco/mercadopago.ts`.
 - **Todo código de erro do banco tem frase** em `FRASES` (`src/dados.ts`): a trava `src/frasesDoBanco.test.ts` lê cada
   `raise exception` das migrations e reprova o código que chegaria cru na tela (falsificada).

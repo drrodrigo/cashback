@@ -14,6 +14,7 @@ import type { Carteira, CobrancaDoCliente, Lancamento, LojaDaRede } from './cart
 import type { Cliente, Cobranca, MinhaLoja } from './balcao/estado'
 import type { Achado, LojaAdmin, Painel, SaquePedido } from './admin/estado'
 import type { CarteirinhaDoClube, QrDaCarteirinha } from './carteirinha/estado'
+import type { Recarga, RecargaAdmin, RecargaCriada } from './recarga/estado'
 import * as banco from './dados'
 
 export interface Repositorio {
@@ -48,6 +49,9 @@ export interface Repositorio {
   lerCobrancas(): Promise<Cobranca[]>
   lerExtratoDaLoja(): Promise<Lancamento[]>
   pedirSaque(valor: number): Promise<void>
+  /** A recarga por Pix (19/11): abre o Pix do valor pedido (mínimo R$ 100). */
+  pedirRecarga(valor: number): Promise<RecargaCriada>
+  lerMinhasRecargas(): Promise<Recarga[]>
 
   // o administrador
   eSoAdmin(e: unknown): boolean
@@ -61,6 +65,9 @@ export interface Repositorio {
   pagarSaque(id: string): Promise<void>
   recusarSaque(id: string): Promise<void>
   vencerAgora(): Promise<number>
+  lerRecargas(): Promise<RecargaAdmin[]>
+  /** Para quando o aviso do Mercado Pago não chegou: o administrador conferiu no extrato. */
+  confirmarRecarga(id: string): Promise<string>
 }
 
 /** O banco de verdade: as mesmas funções de `dados.ts`, que o site já usava. */
@@ -98,4 +105,8 @@ export const repositorioDoBanco: Repositorio = {
   pagarSaque: banco.pagarSaque,
   recusarSaque: banco.recusarSaque,
   vencerAgora: banco.vencerAgora,
+  pedirRecarga: banco.pedirRecarga,
+  lerMinhasRecargas: banco.lerMinhasRecargas,
+  lerRecargas: banco.lerRecargasDoAdmin,
+  confirmarRecarga: banco.confirmarRecarga,
 }

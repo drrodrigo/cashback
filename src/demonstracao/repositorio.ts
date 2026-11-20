@@ -41,6 +41,7 @@ import {
 } from '../nucleo/livro'
 import type { Carteira, CobrancaDoCliente, Lancamento, LojaDaRede } from '../carteira/estado'
 import type { CarteirinhaDoClube, QrDaCarteirinha } from '../carteirinha/estado'
+import { RECARGA_MINIMA, type Recarga, type RecargaAdmin, type RecargaCriada } from '../recarga/estado'
 import type { Cliente, Cobranca, MinhaLoja } from '../balcao/estado'
 import type { Achado, LojaAdmin, Origem, Painel, SaquePedido } from '../admin/estado'
 import type { Repositorio } from '../repositorio'
@@ -102,6 +103,8 @@ interface Mundo {
   aderiram: string[]
   saques: SaquePedido[]
   candidatos: Candidato[]
+  /** As recargas por Pix (19/11). Opcional: o mundo salvo antes disso não tem. */
+  recargas?: RecargaAdmin[]
 }
 
 const CHAVE = 'trocoprime:demonstracao:v1'
@@ -136,6 +139,7 @@ export function mundoInicial(hoje = hojeLocal()): Mundo {
     },
     aderiram: ['bruno'],
     saques: [],
+    recargas: [],
     candidatos: [
       { origem: 'qrunico', origemId: 'qr-otica', nome: 'Ótica Visão', cidade: 'Belo Horizonte', uf: 'MG', contato: 'oticavisao', descontoDoClube: null },
       { origem: 'catalogo', origemId: 'cat-padaria', nome: 'Padaria Pão Quente', cidade: 'Lagoa Santa', uf: 'MG', contato: 'paoquente', descontoDoClube: 10 },
@@ -207,6 +211,8 @@ export interface Demonstracao extends Repositorio {
   passarDias(dias: number): number
   /** O dia de hoje no mundo da demonstração (AAAA-MM-DD). */
   hoje(): string
+  /** Faz o papel do Mercado Pago avisando que o Pix foi pago (com a taxa de 0,99%, a da página oficial). */
+  simularPixPago(recargaId: string): Promise<string>
 }
 
 /**
@@ -610,6 +616,75 @@ export function criarDemonstracao(
     async vencerAgora() {
       exigirAdmin()
       return mudar((m) => avancarPara(m.livro, m.livro.hoje).length)
+    },
+
+    // --- a recarga por Pix (19/11): as MESMAS regras da 0027
+    async pedirRecarga(valor): Promise<RecargaCriada> {
+      precisaEntrar()
+      return mudar((m) => {
+        const loja = lojaDaConta(m)
+        if (!loja) throw erroDoBanco('nao_e_lojista')
+        const v = Math.round(Number(valor) * 100) / 100
+        if (!(v > 0) || v > 10000) throw erroDoBanco('valor_invalido')
+        if (v < RECARGA_MINIMA) throw erroDoBanco('recarga_abaixo_do_minimo')
+        m.recargas ??= []
+        const abertas = m.recargas.filter(
+          (r) => r.loja_id === loja.id && r.situacao === 'aguardando' && Date.now() - Date.parse(r.criada_em) < 600_000,
+        )
+        if (abertas.length >= 5) throw erroDoBanco('recargas_demais')
+        const id = chave('recarga')
+        const expira = new Date(Date.now() + 24 * 3600 * 1000).toISOString()
+        m.recargas.push({
+          id, loja_id: loja.id, loja_nome: loja.nome, valor: v, situacao: 'aguardando', criada_em: new Date().toISOString(),
+          paga_em: null, valor_pago: null, taxa_do_provedor: null, valor_liquido: null, confirmada_por: null,
+        })
+        // Um Pix de mentira, com cara de Pix: o QR abre, mas nenhum banco paga (é o /beta).
+        return { recarga_id: id, valor: v, copia_e_cola: `000201-DEMONSTRACAO-TROCO-PRIME-${id}`, expira_em: expira }
+      })
+    },
+    async lerMinhasRecargas(): Promise<Recarga[]> {
+      const m = ler()
+      const loja = lojaDaConta(m)
+      if (!loja) throw erroDoBanco('nao_e_lojista')
+      return (m.recargas ?? [])
+        .filter((r) => r.loja_id === loja.id)
+        .sort((a, b) => b.criada_em.localeCompare(a.criada_em))
+        .slice(0, 20)
+        .map((r) => ({
+          id: r.id, valor: r.valor, situacao: r.situacao, criada_em: r.criada_em, paga_em: r.paga_em,
+          copia_e_cola: r.situacao === 'aguardando' ? 'DEMONSTRACAO' : null, expira_em: null,
+        }))
+    },
+    async lerRecargas(): Promise<RecargaAdmin[]> {
+      exigirAdmin()
+      return [...(ler().recargas ?? [])].sort(
+        (a, b) => Number(b.situacao !== 'paga') - Number(a.situacao !== 'paga') || b.criada_em.localeCompare(a.criada_em),
+      )
+    },
+    async confirmarRecarga(id) {
+      exigirAdmin()
+      return mudar((m) => {
+        const r = (m.recargas ?? []).find((x) => x.id === id)
+        if (!r || r.situacao === 'cancelada') throw erroDoBanco('recarga_nao_encontrada')
+        if (r.situacao === 'paga') return 'ja_paga'
+        depositar(m.livro, r.loja_id, r.valor, `recarga:${r.id}`)
+        Object.assign(r, { situacao: 'paga', paga_em: new Date().toISOString(), confirmada_por: 'admin' })
+        return 'creditada'
+      })
+    },
+    async simularPixPago(recargaId) {
+      return mudar((m) => {
+        const r = (m.recargas ?? []).find((x) => x.id === recargaId)
+        if (!r) return 'nao_encontrada'
+        if (r.situacao === 'paga') return 'ja_paga'
+        const taxa = Math.round(r.valor * 0.99) / 100
+        depositar(m.livro, r.loja_id, r.valor, `recarga:${r.id}`)
+        Object.assign(r, {
+          situacao: 'paga', paga_em: new Date().toISOString(), valor_pago: r.valor, taxa_do_provedor: taxa,
+          valor_liquido: Math.round((r.valor - taxa) * 100) / 100, confirmada_por: 'provedor',
+        })
+        return 'creditada'
+      })
     },
 
     // --- o que só a demonstração tem
