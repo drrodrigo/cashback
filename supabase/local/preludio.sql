@@ -328,3 +328,214 @@ revoke all on function clube.emitir_token_de(uuid) from public, anon, authentica
 grant usage on schema clube to anon, authenticated;
 grant select on all tables in schema clube to anon, authenticated;
 grant execute on all functions in schema clube to anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- O CADASTRO DA LOJA (0028, 22/11): na aprovação, a loja do Troco Prime vira PARCEIRA DO CLUBE (é o que deixa o balcão
+-- ler a carteirinha), e quem cria o parceiro é o PRÓPRIO CLUBE: `clube.criar_loja_pelo_admin`, `clube.ligar_dono` e
+-- `clube.aprovar_parceiro`. Cópias da produção (`pg_get_functiondef`, 22/11), letra por letra no que o cash depende: só o
+-- administrador DO CLUBE (`clube.perfis.papel = 'admin'`) cadastra, o nome repetido é recusado (`ja_existe`), o apelido
+-- sai do nome, e o dono é o membro (p_dono) OU o e-mail (p_email), nunca os dois.
+-- ---------------------------------------------------------------------------
+create schema if not exists comum;
+
+create or replace function comum.chave_do_nome(p_nome text) returns text
+language sql immutable set search_path to 'pg_temp'
+as $$
+  select nullif(regexp_replace(
+    lower(translate(coalesce(p_nome, ''),
+      'áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ',
+      'aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC')),
+    '[^a-z0-9]', '', 'g'), '')
+$$;
+
+create or replace function comum.miolo_do_telefone(p_telefone text) returns text
+language sql immutable
+as $$
+  with d as (select regexp_replace(coalesce(p_telefone, ''), '\D', '', 'g') as n)
+  select case
+    when length(n) < 10 then null
+    else
+      right(
+        case
+          when right(left(n, length(n) - 8), 1) = '9' and length(left(n, length(n) - 8)) >= 3
+            then left(left(n, length(n) - 8), length(left(n, length(n) - 8)) - 1)
+          else left(n, length(n) - 8)
+        end, 2)
+      || right(n, 8)
+  end
+  from d;
+$$;
+
+alter table auth.users add column if not exists deleted_at timestamptz;
+alter table clube.parceiros add column if not exists link_ativo boolean not null default false;
+alter table clube.parceiros add column if not exists whatsapp text;
+alter table clube.parceiros add column if not exists dono_email_reservado text;
+alter table clube.parceiros add column if not exists logo_url text;
+alter table clube.parceiros add column if not exists instagram text;
+alter table clube.parceiros add column if not exists descricao text;
+alter table clube.parceiros add column if not exists endereco text;
+alter table clube.parceiros add column if not exists cep text;
+alter table clube.parceiros add column if not exists categoria_id uuid;
+alter table clube.parceiros add column if not exists lat double precision;
+alter table clube.parceiros add column if not exists lng double precision;
+alter table clube.parceiros add column if not exists criado_em timestamptz not null default now();
+create unique index if not exists parceiros_slug_key on clube.parceiros (slug) where slug is not null;
+
+create table if not exists clube.categorias (id uuid primary key default gen_random_uuid(), nome text not null default '');
+create table if not exists clube.beneficios (
+  id uuid primary key default gen_random_uuid(),
+  parceiro_id uuid not null,
+  titulo text not null,
+  descricao text,
+  desconto_percentual numeric,
+  ativo boolean not null default true,
+  criado_em timestamptz not null default now()
+);
+
+create or replace function clube.e_admin() returns boolean
+language sql stable security definer set search_path to 'clube', 'public', 'pg_temp'
+as $$
+  select exists (select 1 from clube.perfis where id = auth.uid() and papel = 'admin');
+$$;
+
+create or replace function clube.apelido_para_loja(p_nome text) returns text
+language plpgsql set search_path to 'clube', 'pg_temp'
+as $$
+declare
+  v_base  text;
+  v_tenta text;
+  v_n     int := 1;
+begin
+  v_base := lower(translate(coalesce(p_nome, ''),
+    'áàâãäéèêëíìîïóòôõöúùûüçÁÀÂÃÄÉÈÊËÍÌÎÏÓÒÔÕÖÚÙÛÜÇ',
+    'aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC'));
+  v_base := regexp_replace(v_base, '[^a-z0-9]+', '-', 'g');
+  v_base := btrim(v_base, '-');
+  v_base := left(v_base, 40);
+  v_base := btrim(v_base, '-');
+  if char_length(v_base) < 3 then
+    v_base := btrim('loja-' || v_base, '-');
+  end if;
+  v_tenta := v_base;
+  while exists (select 1 from clube.parceiros p where p.slug = v_tenta) loop
+    v_n := v_n + 1;
+    v_tenta := left(v_base, 40 - char_length(v_n::text) - 1) || '-' || v_n::text;
+    if v_n > 200 then
+      raise exception 'não consegui montar um apelido para esta loja' using hint = 'sem_apelido';
+    end if;
+  end loop;
+  return v_tenta;
+end;
+$$;
+
+create or replace function clube.ligar_dono(p_parceiro_id uuid, p_email text)
+returns table(ligou_agora boolean, dono_email text, reservado boolean)
+language plpgsql security definer set search_path to 'clube', 'public', 'pg_temp'
+as $$
+#variable_conflict use_column
+declare
+  v_email text := lower(btrim(coalesce(p_email, '')));
+  v_user  uuid;
+begin
+  if not clube.e_admin() then
+    raise exception 'só a administração do clube liga lojista em loja' using hint = 'nao_e_admin';
+  end if;
+  if v_email !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' then
+    raise exception 'e-mail inválido' using hint = 'email_invalido';
+  end if;
+  if not exists (select 1 from clube.parceiros p where p.id = p_parceiro_id) then
+    raise exception 'parceiro não encontrado' using hint = 'parceiro_nao_encontrado';
+  end if;
+  select u.id into v_user from auth.users u where lower(u.email) = v_email and u.deleted_at is null limit 1;
+  if v_user is not null then
+    update clube.parceiros set dono_id = v_user, dono_email_reservado = null where id = p_parceiro_id;
+    return query select true, v_email, false;
+  else
+    update clube.parceiros set dono_email_reservado = v_email, dono_id = null where id = p_parceiro_id;
+    return query select false, v_email, true;
+  end if;
+end;
+$$;
+
+create or replace function clube.aprovar_parceiro(p_parceiro_id uuid, p_aprovado boolean)
+returns table(id uuid, nome text, ativo boolean)
+language plpgsql security definer set search_path to 'clube', 'public', 'pg_temp'
+as $$
+begin
+  if not clube.e_admin() then
+    raise exception 'so a administracao do clube aprova parceiro' using hint = 'nao_e_admin';
+  end if;
+  return query
+  update clube.parceiros p set ativo = p_aprovado where p.id = p_parceiro_id
+  returning p.id, p.nome, p.ativo;
+  if not found then
+    raise exception 'parceiro nao encontrado' using hint = 'parceiro_nao_encontrado';
+  end if;
+end;
+$$;
+
+-- A da produção também valida logo, CEP, categoria e coordenadas: o cash não manda nenhum desses, e eles ficam de fora
+-- do dublê. O que o cash manda (nome, WhatsApp, e-mail OU membro, cidade, UF, benefício, no ar) está igual.
+create or replace function clube.criar_loja_pelo_admin(
+  p_nome text, p_whatsapp text default null, p_email text default null, p_cidade text default null,
+  p_uf text default null, p_desconto numeric default null, p_link_ligado boolean default true,
+  p_dono uuid default null, p_logo_url text default null, p_instagram text default null,
+  p_descricao text default null, p_endereco text default null, p_cep text default null,
+  p_categoria_id uuid default null, p_no_ar boolean default false, p_beneficio text default null,
+  p_beneficio_extra text default null, p_lat double precision default null, p_lng double precision default null
+) returns table(id uuid, slug text)
+language plpgsql security definer set search_path to 'clube', 'comum', 'public', 'pg_temp'
+as $$
+#variable_conflict use_column
+declare
+  v_nome  text := nullif(btrim(coalesce(p_nome, '')), '');
+  v_fone  text := nullif(regexp_replace(coalesce(p_whatsapp, ''), '\D', '', 'g'), '');
+  v_email text := nullif(lower(btrim(coalesce(p_email, ''))), '');
+  v_uf    text := nullif(upper(btrim(coalesce(p_uf, ''))), '');
+  v_ben   text := nullif(btrim(coalesce(p_beneficio, '')), '');
+  v_extra text := nullif(btrim(coalesce(p_beneficio_extra, '')), '');
+  v_slug  text;
+  v_id    uuid;
+  v_tel_do_dono text;
+begin
+  if not clube.e_admin() then
+    raise exception 'só a administração do clube cadastra loja por aqui' using hint = 'nao_e_admin';
+  end if;
+  if p_dono is not null then
+    select pf.telefone into v_tel_do_dono from clube.perfis pf where pf.id = p_dono;
+    if not found then raise exception 'membro não encontrado' using hint = 'membro_nao_encontrado'; end if;
+    if v_email is not null then
+      raise exception 'escolha o membro OU o e-mail do dono, não os dois' using hint = 'dono_em_dobro';
+    end if;
+    v_fone := coalesce(v_fone, nullif(regexp_replace(coalesce(v_tel_do_dono, ''), '\D', '', 'g'), ''));
+  end if;
+  if v_nome is null or char_length(v_nome) < 2 then
+    raise exception 'o nome da loja é obrigatório' using hint = 'sem_nome';
+  end if;
+  if v_fone is not null and comum.miolo_do_telefone(v_fone) is null then
+    raise exception 'o WhatsApp precisa do DDD' using hint = 'whatsapp_invalido';
+  end if;
+  if v_uf is not null and v_uf !~ '^[A-Z]{2}$' then
+    raise exception 'UF inválida' using hint = 'uf_invalida';
+  end if;
+  if v_ben is not null and char_length(v_ben) > 80 then
+    raise exception 'o benefício pode ter até 80 letras' using hint = 'beneficio_longo';
+  end if;
+  if exists (select 1 from clube.parceiros p where comum.chave_do_nome(p.nome) = comum.chave_do_nome(v_nome)) then
+    raise exception 'esta loja já está cadastrada' using hint = 'ja_existe';
+  end if;
+  v_slug := clube.apelido_para_loja(v_nome);
+  insert into clube.parceiros (nome, slug, ativo, link_ativo, whatsapp, cidade, uf, dono_id)
+  values (v_nome, v_slug, coalesce(p_no_ar, false), coalesce(p_link_ligado, true), v_fone,
+          nullif(btrim(coalesce(p_cidade, '')), ''), v_uf, p_dono)
+  returning clube.parceiros.id into v_id;
+  if p_desconto is not null or v_ben is not null then
+    insert into clube.beneficios (parceiro_id, titulo, descricao, desconto_percentual, ativo)
+    values (v_id, coalesce(v_ben, p_desconto::text || '% de desconto'), v_extra, p_desconto, true);
+  end if;
+  if v_email is not null then
+    perform clube.ligar_dono(v_id, v_email);
+  end if;
+  return query select v_id, v_slug;
+end;
+$$;
