@@ -83,7 +83,7 @@ npm run build               # com as VITE_*; sem elas o `assets/dados-*.js` sai 
                             # em vez de 219 kB (olhe ESSE arquivo, não o index-*.js)
 npm run dev
 
-bash scripts/banco-de-mentira.sh --testes   # 158 passos num Postgres descartável, de graça
+bash scripts/banco-de-mentira.sh --testes   # 160 passos num Postgres descartável, de graça
 ```
 
 ## O banco é COMPARTILHADO, e isso tem regras
@@ -304,5 +304,12 @@ você vai me mostrando e eu vou testando e vou te falando o que mudar"*.
   em 22/11, 1 dos 5 administradores da casa): administrador só da casa não aprova, e nada fica pela metade. Parceiro do
   Clube com o mesmo nome e OUTRO dono: recusa (`loja_do_clube_tem_outro_dono`), sem mexer no dono de ninguém. No `/beta`,
   a conta **Sorveteria Nova** (`nova@trocoprime.teste`) faz o caminho inteiro: pede, a Administração aprova, o balcão abre.
+- **O mapa das lojas com a marca Troco Prime (22/11, `0026`).** Ele: *"nós vamos classificar as lojas como clube de
+  oferta, ofertas Prime e talvez troco Prime também (...) para ele correr atrás das lojas onde ele sabe que ele vai
+  ganhar"*. O mapa é o **Mapps** (regra da casa), que já marca os pinos com `desconto_clube` e `oferta_prime`
+  (`public.portal_empresas`). A marca Troco Prime quem põe é o Mapps, lendo `cash.lojas_para_o_mapa()` (só
+  `service_role`): as lojas ativas, com os elos (Catálogo = `reivindicado_por_loja_id`, QR Único, parceiro do Clube) e as
+  duas regras. Pedido feito à conversa do Mapps em 22/11. **Falta:** a marca e o filtro do lado do Mapps, e então a porta
+  "Mapa" no aplicativo, embutindo o Mapps com o filtro Troco Prime.
 - **Todo código de erro do banco tem frase** em `FRASES` (`src/dados.ts`): a trava `src/frasesDoBanco.test.ts` lê cada
   `raise exception` das migrations e reprova o código que chegaria cru na tela (falsificada).
