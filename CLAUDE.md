@@ -65,7 +65,7 @@ deu o crédito.
 
 ## O estado, e como conferir (não acredite neste arquivo)
 
-O banco está **no ar** desde 08/11: a gaveta `cash` e as funções da fronteira (40 em 19/11, contadas no banco vivo)
+O banco está **no ar** desde 08/11: a gaveta `cash` e as funções da fronteira (45 em 22/11, contadas no banco vivo)
 (`public.cash_*`). O que exatamente subiu, o nome de cada migration na produção e **o SQL da
 conferência** estão em [`supabase/APLICADO-NA-PRODUCAO.md`](supabase/APLICADO-NA-PRODUCAO.md).
 
@@ -78,12 +78,12 @@ arquivos na ordem e a produção não tinha a mesma ordem.
 
 ```bash
 npm install                 # na 1a vez precisa de --legacy-peer-deps (ver vitest.config.ts)
-npm test                    # 230 testes (o motor, as telas, o /app e o /beta, a carteirinha, a logo, a recarga, a demonstração, as travas)
+npm test                    # 246 testes (o motor, as telas, o /app e o /beta, a carteirinha, a logo, a recarga, o cadastro, as travas)
 npm run build               # com as VITE_*; sem elas o `assets/dados-*.js` sai com 2,8 kB
                             # em vez de 219 kB (olhe ESSE arquivo, não o index-*.js)
 npm run dev
 
-bash scripts/banco-de-mentira.sh --testes   # 147 passos num Postgres descartável, de graça
+bash scripts/banco-de-mentira.sh --testes   # 158 passos num Postgres descartável, de graça
 ```
 
 ## O banco é COMPARTILHADO, e isso tem regras
@@ -231,7 +231,7 @@ migração de dado de gente:
 6. ~~O vencimento automático~~: **feito em 19/11**, rotina `troco-prime-vencer` (04:11 em Brasília). Falta o **aviso** de
    vencimento (7 e 2 dias): precisa de um canal (push do QR Bio, WhatsApp ou e-mail).
 7. O primeiro parceiro de verdade (zero loja, zero cliente em 19/11).
-8. 🔴 **A loja vinculada pelo Catálogo ou pelo QR Único NÃO lê a carteirinha do Clube** (medido em 19/11, no banco vivo):
+8. ~~A loja vinculada não lê a carteirinha~~: **resolvido em 22/11 pelo cadastro (`0028`)**: a loja aprovada vira parceira ativa do Clube (ver "O cadastro da loja"). O que segue é o retrato de 19/11. 🔴 **A loja vinculada pelo Catálogo ou pelo QR Único NÃO lê a carteirinha do Clube** (medido em 19/11, no banco vivo):
    `cash_balcao_ler_carteirinha` chama `clube.ler_carteirinha(parceiro, token)`, e o Clube só deixa ler o **dono de um
    parceiro ATIVO do Clube** (`clube.parceiros.dono_id = auth.uid()`, `ativo`). A loja que nasceu no `/admin` pelo
    Catálogo ou pelo QR Único não tem `clube_parceiro_id`: o balcão dela dá `loja_sem_carteirinha` (desde 19/11 com frase
@@ -253,7 +253,7 @@ você vai me mostrando e eu vou testando e vou te falando o que mudar"*.
   (vence o que tem de vencer) e **Recomeçar**.
 - **Contas de teste do `/beta`** (senha `123456`, ou um toque em "Entrar como"): `ana@trocoprime.teste` (cliente sem
   ativar), `bruno@trocoprime.teste` (cliente com 40 juntados), `otica@trocoprime.teste` (QR Único, 10% só troco),
-  `padaria@trocoprime.teste` (Catálogo, 10% de desconto no caixa + 10% de troco), `admin@trocoprime.teste`. No balcão,
+  `padaria@trocoprime.teste` (Catálogo, 10% de desconto no caixa + 10% de troco), `nova@trocoprime.teste` (ainda não é loja: faz o cadastro), `admin@trocoprime.teste`. No balcão,
   "Ler a carteirinha de Ana/Bruno" faz o papel da câmera.
 - 🔴 **Toda tela tem a setinha de voltar** no topo, à esquerda (regra dele, 18/11, no Aviso de Entrega: *"todo aplicativo
   tem que ter setinha em cima pra voltar. Aprende, é regra."*). Trava em `src/app/casca.test.ts`.
@@ -292,5 +292,17 @@ você vai me mostrando e eu vou testando e vou te falando o que mudar"*.
   recebe o crédito cheio; a taxa fica com a casa. **Aberto:** a mensalidade da loja (ele quer cobrar; pode embutir a taxa).
   No `/admin`, "Confirmar na mão" (dois passos) para quando o aviso não chegar. No `/beta`, "Simular o Pix pago".
   Publicar as funções com `verify_jwt: false` e com `supabase/functions/_troco/mercadopago.ts` como `../_troco/mercadopago.ts`.
+- **O cadastro da loja (22/11, `0028`).** Ele: *"Ela vai fazer um cadastro com a gente (...) E aí a gente vai vincular
+  (...) ou o Troco Prime ou a loja do catálogo ou a loja do QR."* Quem entra em **Sou loja** e ainda não é loja vê
+  **"Quero ser loja Troco Prime"** (`src/loja/cadastro.ts`): nome, CPF ou CNPJ (dígito verificador conferido nos DOIS
+  lugares, `cash.documento_valido` e `src/loja/estado.ts`), WhatsApp, cidade, UF, troco e desconto no caixa. O pedido
+  cai no `/admin` ("Pedidos para ser loja"): **Aprovar só no Troco Prime**, **Ligar a uma loja que já existe** (busca no
+  Catálogo e no QR Único) ou **Recusar** com motivo (a loja vê). Aprovar pede confirmação, que DIZ o efeito: a loja vira
+  **parceira ATIVA do Clube Prime**, com quem pediu como dono (`cash.garantir_parceiro_do_clube`), e é isso que faz o
+  balcão dela ler a carteirinha. 🔴 Quem cria o parceiro é o PRÓPRIO CLUBE (`clube.criar_loja_pelo_admin`,
+  `clube.ligar_dono`, `clube.aprovar_parceiro`), e ele exige o **administrador do Clube** (`clube.perfis.papel = 'admin'`;
+  em 22/11, 1 dos 5 administradores da casa): administrador só da casa não aprova, e nada fica pela metade. Parceiro do
+  Clube com o mesmo nome e OUTRO dono: recusa (`loja_do_clube_tem_outro_dono`), sem mexer no dono de ninguém. No `/beta`,
+  a conta **Sorveteria Nova** (`nova@trocoprime.teste`) faz o caminho inteiro: pede, a Administração aprova, o balcão abre.
 - **Todo código de erro do banco tem frase** em `FRASES` (`src/dados.ts`): a trava `src/frasesDoBanco.test.ts` lê cada
   `raise exception` das migrations e reprova o código que chegaria cru na tela (falsificada).
