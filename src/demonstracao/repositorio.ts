@@ -42,6 +42,7 @@ import {
 import type { Carteira, CobrancaDoCliente, Lancamento, LojaDaRede } from '../carteira/estado'
 import type { CarteirinhaDoClube, QrDaCarteirinha } from '../carteirinha/estado'
 import { RECARGA_MINIMA, type Recarga, type RecargaAdmin, type RecargaCriada } from '../recarga/estado'
+import { documentoValido, type MeuPedidoDeLoja, type PedidoDeLojaAdmin } from '../loja/estado'
 import type { Cliente, Cobranca, MinhaLoja } from '../balcao/estado'
 import type { Achado, LojaAdmin, Origem, Painel, SaquePedido } from '../admin/estado'
 import type { Repositorio } from '../repositorio'
@@ -54,6 +55,7 @@ export const CONTAS_DE_TESTE = [
   { email: 'bruno@trocoprime.teste', nome: 'Bruno Lima', papel: 'cliente', id: 'bruno', sobre: 'cliente do Clube, começa com 40 de troco juntado' },
   { email: 'otica@trocoprime.teste', nome: 'Ótica Visão', papel: 'loja', id: 'otica', sobre: 'loja do QR Único, só troco: 10%' },
   { email: 'padaria@trocoprime.teste', nome: 'Padaria Pão Quente', papel: 'loja', id: 'padaria', sobre: 'loja do Catálogo, 10% de desconto + 10% de troco' },
+  { email: 'nova@trocoprime.teste', nome: 'Sorveteria Nova', papel: 'loja', id: 'nova', sobre: 'ainda não é loja: faz o cadastro' },
   { email: 'admin@trocoprime.teste', nome: 'Administração', papel: 'admin', id: 'admin', sobre: 'vincula lojas, registra depósito, paga saque' },
 ] as const
 
@@ -105,6 +107,8 @@ interface Mundo {
   candidatos: Candidato[]
   /** As recargas por Pix (19/11). Opcional: o mundo salvo antes disso não tem. */
   recargas?: RecargaAdmin[]
+  /** Os pedidos para ser loja (22/11). */
+  pedidosDeLoja?: (PedidoDeLojaAdmin & { pedido_por: string; motivo: string | null; decidido_em: string | null })[]
 }
 
 const CHAVE = 'trocoprime:demonstracao:v1'
@@ -140,6 +144,7 @@ export function mundoInicial(hoje = hojeLocal()): Mundo {
     aderiram: ['bruno'],
     saques: [],
     recargas: [],
+    pedidosDeLoja: [],
     candidatos: [
       { origem: 'qrunico', origemId: 'qr-otica', nome: 'Ótica Visão', cidade: 'Belo Horizonte', uf: 'MG', contato: 'oticavisao', descontoDoClube: null },
       { origem: 'catalogo', origemId: 'cat-padaria', nome: 'Padaria Pão Quente', cidade: 'Lagoa Santa', uf: 'MG', contato: 'paoquente', descontoDoClube: 10 },
@@ -684,6 +689,73 @@ export function criarDemonstracao(
           valor_liquido: Math.round((r.valor - taxa) * 100) / 100, confirmada_por: 'provedor',
         })
         return 'creditada'
+      })
+    },
+
+    // --- o cadastro da loja (22/11): as MESMAS recusas da 0028
+    async pedirParaSerLoja(d) {
+      const c = precisaEntrar()
+      return mudar((m) => {
+        if (lojaDaConta(m)) throw erroDoBanco('ja_e_lojista')
+        const doc = d.documento.replace(/\D/g, '')
+        const fone = d.whatsapp.replace(/\D/g, '')
+        if (d.nome.trim().length < 2) throw erroDoBanco('nome_da_loja_vazio')
+        if (!documentoValido(doc)) throw erroDoBanco('documento_invalido')
+        if (fone.length < 10 || fone.length > 13) throw erroDoBanco('whatsapp_invalido')
+        if (!d.cidade.trim() || !/^[A-Za-z]{2}$/.test(d.uf.trim())) throw erroDoBanco('cidade_e_uf')
+        if (!(d.troco > 0 && d.troco <= 100) || !(d.desconto >= 0 && d.desconto < 100)) throw erroDoBanco('percentual_invalido')
+        if (d.troco + d.desconto > 100) throw erroDoBanco('regras_passam_de_100')
+        m.pedidosDeLoja ??= []
+        const aberto = m.pedidosDeLoja.find((p) => p.pedido_por === c.id && p.situacao === 'pedido')
+        const dados = {
+          nome: d.nome.trim(), documento: doc, whatsapp: fone, cidade: d.cidade.trim(), uf: d.uf.trim().toUpperCase(),
+          troco_percentual: d.troco, desconto_no_caixa: d.desconto, criado_em: new Date().toISOString(),
+        }
+        if (aberto) {
+          Object.assign(aberto, dados)
+          return aberto.id
+        }
+        const id = chave('pedido-de-loja')
+        m.pedidosDeLoja.push({
+          id, pedido_por: c.id, email: c.email, situacao: 'pedido', motivo: null, decidido_em: null, loja_id: null, ...dados,
+        })
+        return id
+      })
+    },
+    async meuPedidoDeLoja(): Promise<MeuPedidoDeLoja | null> {
+      const c = precisaEntrar()
+      const p = [...(ler().pedidosDeLoja ?? [])].filter((x) => x.pedido_por === c.id).pop()
+      return p ? { id: p.id, nome: p.nome, situacao: p.situacao, motivo: p.motivo, criado_em: p.criado_em, decidido_em: p.decidido_em } : null
+    },
+    async lerPedidosDeLoja(): Promise<PedidoDeLojaAdmin[]> {
+      exigirAdmin()
+      return [...(ler().pedidosDeLoja ?? [])].sort(
+        (a, b) => Number(b.situacao === 'pedido') - Number(a.situacao === 'pedido') || b.criado_em.localeCompare(a.criado_em),
+      )
+    },
+    async aprovarLoja(pedidoId, origem, origemId) {
+      exigirAdmin()
+      return mudar((m) => {
+        const p = (m.pedidosDeLoja ?? []).find((x) => x.id === pedidoId)
+        if (!p || p.situacao !== 'pedido') throw erroDoBanco('pedido_de_loja_nao_encontrado')
+        if (origem !== 'troco' && !origemId) throw erroDoBanco('origem_invalida')
+        // Na demonstração a loja nasce com o id da conta de quem pediu: é assim que o balcão dela a acha.
+        const id = p.pedido_por
+        m.livro.lojas.push({ id, nome: p.nome, cashbackPercentual: p.troco_percentual })
+        m.lojas[id] = {
+          origem: origem === 'troco' ? 'clube' : origem, origemId: origemId ?? id, descontoNoCaixa: p.desconto_no_caixa,
+          cidade: p.cidade, uf: p.uf, ativa: true,
+        }
+        Object.assign(p, { situacao: 'aprovado', loja_id: id, decidido_em: new Date().toISOString() })
+        return id
+      })
+    },
+    async recusarLoja(pedidoId, motivo) {
+      exigirAdmin()
+      mudar((m) => {
+        const p = (m.pedidosDeLoja ?? []).find((x) => x.id === pedidoId)
+        if (!p || p.situacao !== 'pedido') throw erroDoBanco('pedido_de_loja_nao_encontrado')
+        Object.assign(p, { situacao: 'recusado', motivo: motivo.trim() || null, decidido_em: new Date().toISOString() })
       })
     },
 

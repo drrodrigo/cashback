@@ -119,6 +119,16 @@ describe('a recarga por Pix no /beta', () => {
   })
 })
 
+describe('o cadastro da loja no /beta', () => {
+  it('a Sorveteria Nova (ainda não é loja) entra em "Sou loja" e vê "Quero ser loja Troco Prime"', async () => {
+    const { raiz, casca } = beta()
+    casca.ir('loja')
+    botaoQueDiz(raiz, 'Entrar como Sorveteria Nova')!.click()
+    await vi.waitFor(() => expect(texto(raiz)).toContain('Quero ser loja Troco Prime'))
+    expect(raiz.querySelector('form.lc-form')).not.toBeNull()
+  })
+})
+
 describe('o /app de verdade', () => {
   it('não tem contas de teste nem faixa de demonstração', () => {
     const raiz = document.createElement('div')

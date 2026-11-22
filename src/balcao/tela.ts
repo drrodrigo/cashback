@@ -10,6 +10,8 @@
 // lança nada. Quem lança é o botão de baixo, que diz o valor.
 // ---------------------------------------------------------------------------
 
+import { blocoDoCadastro, type Rascunho } from '../loja/cadastro'
+import type { DadosDoPedidoDeLoja, MeuPedidoDeLoja } from '../loja/estado'
 import { tituloComIcone } from '../lib/marcaNaTela'
 import { MARCA } from '../marca'
 import {
@@ -39,6 +41,10 @@ export interface AcoesDoBalcao {
   escolher(modo: ModoDoAtendimento): void
   /** Abre a folha "Adicionar crédito" (a recarga por Pix, 19/11). */
   abrirRecarga?(): void
+  /** "Quero ser loja Troco Prime" (22/11): manda o pedido. */
+  pedirParaSerLoja?(dados: DadosDoPedidoDeLoja): void
+  /** Repinta sem buscar nada (o formulário abre ou fecha). */
+  repintar?(): void
   /** Onde pendurar o vídeo da câmera, quando houver. */
   video?: HTMLVideoElement | null
 }
@@ -58,6 +64,10 @@ export interface DadosDoBalcao {
   erro: string | null
   recado: string | null
   ocupado: boolean
+  /** O pedido para ser loja, de quem entrou e ainda não é (22/11). */
+  pedidoDeLoja?: MeuPedidoDeLoja | null
+  /** O que a pessoa está digitando no cadastro (sobrevive à repintura). */
+  rascunhoDoCadastro?: Rascunho
 }
 
 /** Para onde o "voltar" leva. Um lugar só, e é o de verdade. */
@@ -166,7 +176,15 @@ function telaEntrar(acoes: AcoesDoBalcao, d: DadosDoBalcao): HTMLElement {
  * banco a cada chamada -- `cash.loja_do_usuario()` --, então esta tela também
  * aparece para quem VENDEU a loja, que é o certo.
  */
-function telaNaoEhLojista(): HTMLElement {
+function telaNaoEhLojista(acoes?: AcoesDoBalcao, d?: DadosDoBalcao): HTMLElement {
+  // O CADASTRO DA LOJA (22/11): quem entrou e ainda não é loja pede aqui mesmo.
+  if (acoes?.pedirParaSerLoja && d?.rascunhoDoCadastro) {
+    return blocoDoCadastro(
+      { pedido: d.pedidoDeLoja ?? null, rascunho: d.rascunhoDoCadastro, ocupado: d.ocupado },
+      (dados) => acoes.pedirParaSerLoja!(dados),
+      () => acoes.repintar?.(),
+    )
+  }
   const s = el('section', { classe: 'ca-cartao' })
   s.appendChild(el('h2', { texto: `Esta conta não tem loja no ${MARCA.nome}` }))
   s.appendChild(
@@ -468,7 +486,7 @@ export function desenharBalcao(onde: HTMLElement, d: DadosDoBalcao, acoes: Acoes
     return
   }
   if (tela.qual === 'nao-e-lojista') {
-    onde.appendChild(telaNaoEhLojista())
+    onde.appendChild(telaNaoEhLojista(acoes, d))
     return
   }
 

@@ -1114,3 +1114,42 @@ button.ct-cartao:focus-visible {
   color: var(--muted);
   text-align: right;
 }
+
+/* --- o cadastro da loja (22/11): "Quero ser loja Troco Prime" ------------------------ */
+.lc-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+.lc-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.lc-campo span {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.lc-campo input {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 1rem;
+}
+.lc-linha {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 0.5rem;
+  /* Rótulo que quebra em duas linhas não desalinha as caixas: elas ficam no pé da linha. */
+  align-items: end;
+}
+.lc-linha:last-of-type {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.lc-problema:empty {
+  display: none;
+}

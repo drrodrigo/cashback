@@ -15,6 +15,7 @@ import type { Cliente, Cobranca, MinhaLoja } from './balcao/estado'
 import type { Achado, LojaAdmin, Painel, SaquePedido } from './admin/estado'
 import type { CarteirinhaDoClube, QrDaCarteirinha } from './carteirinha/estado'
 import type { Recarga, RecargaAdmin, RecargaCriada } from './recarga/estado'
+import type { DadosDoPedidoDeLoja, MeuPedidoDeLoja, OrigemDaAprovacao, PedidoDeLojaAdmin } from './loja/estado'
 import * as banco from './dados'
 
 export interface Repositorio {
@@ -52,6 +53,9 @@ export interface Repositorio {
   /** A recarga por Pix (19/11): abre o Pix do valor pedido (mínimo R$ 100). */
   pedirRecarga(valor: number): Promise<RecargaCriada>
   lerMinhasRecargas(): Promise<Recarga[]>
+  /** O cadastro da loja (22/11, 0028): quem ainda não é loja pede, e acompanha o pedido. */
+  pedirParaSerLoja(dados: DadosDoPedidoDeLoja): Promise<string>
+  meuPedidoDeLoja(): Promise<MeuPedidoDeLoja | null>
 
   // o administrador
   eSoAdmin(e: unknown): boolean
@@ -68,6 +72,10 @@ export interface Repositorio {
   lerRecargas(): Promise<RecargaAdmin[]>
   /** Para quando o aviso do Mercado Pago não chegou: o administrador conferiu no extrato. */
   confirmarRecarga(id: string): Promise<string>
+  lerPedidosDeLoja(): Promise<PedidoDeLojaAdmin[]>
+  /** Aprova: vincula (Troco Prime, Catálogo ou QR Único) e a loja vira parceira do Clube. Devolve o id da loja. */
+  aprovarLoja(pedidoId: string, origem: OrigemDaAprovacao, origemId?: string | null): Promise<string>
+  recusarLoja(pedidoId: string, motivo: string): Promise<void>
 }
 
 /** O banco de verdade: as mesmas funções de `dados.ts`, que o site já usava. */
@@ -109,4 +117,9 @@ export const repositorioDoBanco: Repositorio = {
   lerMinhasRecargas: banco.lerMinhasRecargas,
   lerRecargas: banco.lerRecargasDoAdmin,
   confirmarRecarga: banco.confirmarRecarga,
+  pedirParaSerLoja: banco.pedirParaSerLoja,
+  meuPedidoDeLoja: banco.meuPedidoDeLoja,
+  lerPedidosDeLoja: banco.lerPedidosDeLoja,
+  aprovarLoja: banco.aprovarLoja,
+  recusarLoja: banco.recusarLoja,
 }

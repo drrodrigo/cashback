@@ -9,6 +9,7 @@
 // toque errado no celular não pode virar R$ 3.000 de troco.
 // ---------------------------------------------------------------------------
 
+import { documentoFormatado, linkDoWhatsapp, type OrigemDaAprovacao, type PedidoDeLojaAdmin } from '../loja/estado'
 import { situacaoDaRecarga, type RecargaAdmin } from '../recarga/estado'
 import { tituloComIcone } from '../lib/marcaNaTela'
 import { MARCA } from '../marca'
@@ -41,10 +42,25 @@ export interface AcoesDoAdmin {
   pagarSaque(id: string): Promise<void>
   recusarSaque(id: string): Promise<void>
   vencerAgora(): Promise<void>
+  /** O cadastro da loja (22/11): procurar a loja que já existe, escolher o vínculo, aprovar ou recusar. */
+  procurarParaPedido?(pedidoId: string, nome: string): Promise<void>
+  escolherVinculo?(pedidoId: string, origem: OrigemDaAprovacao, origemId: string | null, rotulo: string): void
+  aprovarPedido?(): Promise<void>
+  prepararRecusa?(pedidoId: string): void
+  recusarPedido?(motivo: string): Promise<void>
+  cancelarPedido?(): void
   /** A recarga por Pix que não teve aviso: primeiro pergunta "caiu mesmo?", depois credita (19/11). */
   prepararRecarga?(id: string): void
   confirmarRecarga?(): Promise<void>
   cancelarRecarga?(): void
+}
+
+export interface AnaliseDoPedido {
+  pedidoId: string
+  passo: 'buscar' | 'confirmar' | 'recusar'
+  /** O que a busca achou no Catálogo e no QR Único (null = ainda buscando). */
+  achados?: Achado[] | null
+  escolha?: { origem: OrigemDaAprovacao; origemId: string | null; rotulo: string }
 }
 
 export interface DepositoPendente {
@@ -63,6 +79,10 @@ export interface DadosDoAdmin {
   achados: Achado[] | null
   lojas: LojaAdmin[]
   saques: SaquePedido[]
+  /** Os pedidos para ser loja (22/11). */
+  pedidosDeLoja?: PedidoDeLojaAdmin[]
+  /** O pedido que o administrador está decidindo, e em que passo. */
+  analise?: AnaliseDoPedido | null
   /** As recargas por Pix das lojas, com a taxa do Mercado Pago (19/11). */
   recargas?: RecargaAdmin[]
   /** A recarga que o administrador vai confirmar na mão (o segundo passo). */
@@ -485,6 +505,102 @@ function cartaoDasRecargas(acoes: AcoesDoAdmin, d: DadosDoAdmin): HTMLElement | 
   return s
 }
 
+/**
+ * OS PEDIDOS PARA SER LOJA (22/11). Para cada pedido aberto: os dados (com o WhatsApp para conversar antes) e três
+ * caminhos — aprovar só no Troco Prime, ligar a uma loja que já existe (Catálogo ou QR Único), ou recusar com motivo.
+ * Aprovar pede confirmação, e a confirmação DIZ o efeito: a loja vira parceira do Clube Prime e aparece no Clube.
+ */
+function cartaoDosPedidosDeLoja(acoes: AcoesDoAdmin, d: DadosDoAdmin): HTMLElement | null {
+  if (!d.pedidosDeLoja || !acoes.escolherVinculo) return null
+  const abertos = d.pedidosDeLoja.filter((p) => p.situacao === 'pedido')
+  const s = el('section', { classe: 'ca-cartao' })
+  s.appendChild(el('h2', { texto: `Pedidos para ser loja${abertos.length ? ` (${abertos.length})` : ''}` }))
+  if (abertos.length === 0) {
+    s.appendChild(el('p', { classe: 'ca-dica', texto: 'Nenhum pedido esperando. A loja pede pelo balcão: Sou loja → Quero ser loja Troco Prime.' }))
+    return s
+  }
+  const lista = el('ul', { classe: 'ca-lista' })
+  for (const p of abertos) {
+    const regra = p.desconto_no_caixa > 0
+      ? `${p.desconto_no_caixa}% de desconto no caixa + ${p.troco_percentual}% de troco`
+      : `${p.troco_percentual}% de troco`
+    const li = el('li', { classe: 'ca-achado' }, [
+      el('strong', { texto: p.nome }),
+      el('span', { classe: 'ca-dica', texto: [documentoFormatado(p.documento), [p.cidade, p.uf].filter(Boolean).join(' - '), regra, p.email].filter(Boolean).join(' · ') }),
+    ])
+    const zap = el('a', { classe: 'ca-link', texto: 'Conversar no WhatsApp' })
+    zap.setAttribute('href', linkDoWhatsapp(p.whatsapp))
+    zap.setAttribute('target', '_blank')
+    zap.setAttribute('rel', 'noopener')
+    li.appendChild(zap)
+
+    const a = d.analise?.pedidoId === p.id ? d.analise : null
+    if (a?.passo === 'confirmar' && a.escolha) {
+      li.appendChild(
+        el('p', {
+          classe: 'ca-frase',
+          texto: `Aprovar a ${p.nome} ${a.escolha.rotulo}? Ela vira loja do ${MARCA.nome} e parceira do Clube Prime: aparece no Clube, e o balcão dela passa a ler a carteirinha.`,
+        }),
+      )
+      const sim = botao(`Sim, aprovar a ${p.nome}`)
+      sim.disabled = d.ocupado
+      sim.addEventListener('click', () => void acoes.aprovarPedido?.())
+      const nao = botao('Cancelar', 'ca-link')
+      nao.addEventListener('click', () => acoes.cancelarPedido?.())
+      li.appendChild(el('div', { classe: 'ca-acao' }, [sim, nao]))
+    } else if (a?.passo === 'recusar') {
+      const motivo = el('input')
+      motivo.type = 'text'
+      motivo.placeholder = 'Motivo (a loja vê)'
+      motivo.setAttribute('aria-label', 'Motivo da recusa')
+      const recusar = botao('Recusar o pedido', 'ca-botao-fraco')
+      recusar.disabled = d.ocupado
+      recusar.addEventListener('click', () => void acoes.recusarPedido?.(motivo.value))
+      const nao = botao('Cancelar', 'ca-link')
+      nao.addEventListener('click', () => acoes.cancelarPedido?.())
+      li.append(motivo, el('div', { classe: 'ca-acao' }, [recusar, nao]))
+    } else {
+      if (a?.passo === 'buscar') {
+        if (a.achados === null || a.achados === undefined) {
+          li.appendChild(el('p', { classe: 'ca-dica', texto: 'Procurando no Catálogo Online e no QR Único…' }))
+        } else if (a.achados.length === 0) {
+          li.appendChild(el('p', { classe: 'ca-dica', texto: 'Nenhuma loja com esse nome no Catálogo Online nem no QR Único.' }))
+        } else {
+          const ul = el('ul', { classe: 'ca-lista' })
+          for (const x of a.achados) {
+            const onde = x.origem === 'catalogo' ? 'Catálogo Online' : 'QR Único'
+            const escolher = botao(`Ligar à ${x.nome} (${onde})`, 'ca-botao-fraco')
+            escolher.disabled = d.ocupado || x.vinculada
+            escolher.addEventListener('click', () =>
+              acoes.escolherVinculo!(p.id, x.origem, x.origem_id, `ligada à ${x.nome} do ${onde}`),
+            )
+            ul.appendChild(
+              el('li', {}, [
+                escolher,
+                el('span', { classe: 'ca-dica', texto: [[x.cidade, x.uf].filter(Boolean).join(' - '), x.contato, x.vinculada ? 'já está no Troco Prime' : ''].filter(Boolean).join(' · ') }),
+              ]),
+            )
+          }
+          li.appendChild(ul)
+        }
+      }
+      const soTroco = botao(`Aprovar só no ${MARCA.nome}`)
+      soTroco.disabled = d.ocupado
+      soTroco.addEventListener('click', () => acoes.escolherVinculo!(p.id, 'troco', null, `só no ${MARCA.nome}`))
+      const procurar = botao('Ligar a uma loja que já existe', 'ca-botao-fraco')
+      procurar.disabled = d.ocupado
+      procurar.addEventListener('click', () => void acoes.procurarParaPedido?.(p.id, p.nome))
+      const recusar = botao('Recusar', 'ca-link')
+      recusar.disabled = d.ocupado
+      recusar.addEventListener('click', () => acoes.prepararRecusa?.(p.id))
+      li.appendChild(el('div', { classe: 'ca-acao' }, [soTroco, procurar, recusar]))
+    }
+    lista.appendChild(li)
+  }
+  s.appendChild(lista)
+  return s
+}
+
 function cartaoDoVencimento(acoes: AcoesDoAdmin, d: DadosDoAdmin): HTMLElement {
   const s = el('section', { classe: 'ca-cartao' })
   s.appendChild(el('h2', { texto: 'Vencimento' }))
@@ -528,6 +644,8 @@ export function desenharAdmin(onde: HTMLElement, d: DadosDoAdmin, acoes: AcoesDo
   }
 
   if (d.depositoPendente) onde.appendChild(cartaoDaConfirmacao(d.depositoPendente, acoes, d))
+  const pedidos = cartaoDosPedidosDeLoja(acoes, d)
+  if (pedidos) onde.appendChild(pedidos)
   onde.appendChild(cartaoDaConferencia(tela.painel))
   onde.appendChild(cartaoDaBusca(acoes, d))
   onde.appendChild(cartaoDasLojas(acoes, d))

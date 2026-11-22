@@ -23,6 +23,7 @@ import type { Cliente, Cobranca, MinhaLoja } from './balcao/estado'
 import type { Achado, LojaAdmin, Painel, SaquePedido } from './admin/estado'
 import type { CarteirinhaDoClube, QrDaCarteirinha } from './carteirinha/estado'
 import type { Recarga, RecargaAdmin, RecargaCriada } from './recarga/estado'
+import type { DadosDoPedidoDeLoja, MeuPedidoDeLoja, OrigemDaAprovacao, PedidoDeLojaAdmin } from './loja/estado'
 import { MARCA } from './marca'
 
 // `.trim()` porque copiar-e-colar em painel de deploy quase sempre traz um
@@ -95,6 +96,18 @@ const FRASES: Record<string, string> = {
   so_servidor: 'Só o sistema confirma o pagamento do Pix.',
   pix_desligado: 'O Pix automático ainda não está ligado. Fale com a administração do Troco Prime.',
   pix_falhou: 'O Mercado Pago não gerou o Pix agora. Tente de novo em instantes.',
+  // O cadastro da loja (22/11, 0028).
+  ja_e_lojista: `Esta conta já é de uma loja do ${MARCA.nome}. Saia e entre de novo para abrir o balcão.`,
+  nome_da_loja_vazio: 'Escreva o nome da loja.',
+  documento_invalido: 'Confira o CPF ou o CNPJ: algum número está errado.',
+  whatsapp_invalido: 'O WhatsApp precisa do DDD e do número.',
+  cidade_e_uf: 'Escreva a cidade e a UF (MG, SP...).',
+  origem_invalida: 'Escolha como ligar a loja: só no Troco Prime, ou a uma loja do Catálogo ou do QR Único.',
+  pedido_de_loja_nao_encontrado: 'Esse pedido já foi aprovado ou recusado. A lista foi atualizada.',
+  loja_do_clube_tem_outro_dono: 'Já existe uma loja com esse nome no Clube Prime, de outro dono. Confira com a loja antes de aprovar.',
+  parceiro_ja_tem_loja: 'Essa loja do Clube Prime já está ligada a outra loja do Troco Prime.',
+  // A dica que o Clube manda quando quem aprova não é da administração DELE.
+  nao_e_admin: 'Para aprovar, entre com a conta de administrador do Clube Prime: é o Clube que cadastra a loja parceira.',
 }
 
 /**
@@ -419,4 +432,47 @@ export async function confirmarRecarga(id: string): Promise<string> {
   const { data, error } = await cliente().rpc('cash_admin_confirmar_recarga', { p_recarga: id })
   if (error) throw error
   return String(data ?? '')
+}
+
+// --- o cadastro da loja (22/11, 0028) ---------------------------------------------------------------------------------
+
+export async function pedirParaSerLoja(d: DadosDoPedidoDeLoja): Promise<string> {
+  const { data, error } = await cliente().rpc('cash_pedir_para_ser_loja', {
+    p_nome: d.nome,
+    p_documento: d.documento,
+    p_whatsapp: d.whatsapp,
+    p_cidade: d.cidade,
+    p_uf: d.uf,
+    p_troco: d.troco,
+    p_desconto: d.desconto,
+  })
+  if (error) throw error
+  return String(data)
+}
+
+export async function meuPedidoDeLoja(): Promise<MeuPedidoDeLoja | null> {
+  const { data, error } = await cliente().rpc('cash_meu_pedido_de_loja')
+  if (error) throw error
+  return (data as MeuPedidoDeLoja[] | null)?.[0] ?? null
+}
+
+export async function lerPedidosDeLoja(): Promise<PedidoDeLojaAdmin[]> {
+  const { data, error } = await cliente().rpc('cash_admin_pedidos_de_loja')
+  if (error) throw error
+  return (data as PedidoDeLojaAdmin[] | null) ?? []
+}
+
+export async function aprovarLoja(pedidoId: string, origem: OrigemDaAprovacao, origemId?: string | null): Promise<string> {
+  const { data, error } = await cliente().rpc('cash_admin_aprovar_loja', {
+    p_pedido: pedidoId,
+    p_origem: origem,
+    p_origem_id: origemId ?? null,
+  })
+  if (error) throw error
+  return String(data)
+}
+
+export async function recusarLoja(pedidoId: string, motivo: string): Promise<void> {
+  const { error } = await cliente().rpc('cash_admin_recusar_loja', { p_pedido: pedidoId, p_motivo: motivo })
+  if (error) throw error
 }

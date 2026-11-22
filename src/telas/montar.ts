@@ -16,6 +16,7 @@ import { extrairToken } from '../lib/token'
 import { ligarCamera, type EstadoDaCamera, type Leitor } from '../balcao/leitorQr'
 import { abrirFolhaDoQr, type Folha } from '../carteirinha/tela'
 import { abrirFolhaDeRecarga, type FolhaDeRecarga } from '../recarga/folha'
+import { rascunhoNovo } from '../loja/cadastro'
 
 /** O que a montagem devolve: repintar quando os dados mudarem por fora, e desmontar ao sair da tela. */
 export interface Montada {
@@ -273,6 +274,14 @@ export function montarBalcao(onde: HTMLElement, repo: Repositorio, opcoes: Opcoe
       dados.modo = modo
       pintar()
     },
+    pedirParaSerLoja: (pedido) =>
+      tentar(async () => {
+        await repo.pedirParaSerLoja(pedido)
+        if (dados.rascunhoDoCadastro) dados.rascunhoDoCadastro.corrigindo = false
+        dados.recado = 'Pedido enviado! A resposta aparece aqui, nesta tela.'
+        await carregar()
+      }),
+    repintar: () => pintar(),
     abrirRecarga: () => {
       if (folhaDaRecarga) return
       folhaDaRecarga = abrirFolhaDeRecarga({
@@ -300,6 +309,11 @@ export function montarBalcao(onde: HTMLElement, repo: Repositorio, opcoes: Opcoe
     pintar()
     try {
       dados.loja = await repo.lerMinhaLoja()
+      // Quem entrou e ainda não é loja vê o cadastro: o pedido dele, se já mandou.
+      if (!dados.loja) {
+        dados.rascunhoDoCadastro ??= rascunhoNovo()
+        dados.pedidoDeLoja = await repo.meuPedidoDeLoja().catch(() => null)
+      }
       if (dados.loja) {
         dados.cobrancas = await repo.lerCobrancas().catch(() => [])
         dados.extrato = await repo.lerExtratoDaLoja().catch(() => [])
@@ -369,8 +383,9 @@ export function montarAdmin(onde: HTMLElement, repo: Repositorio): Montada {
       dados.painel = painel
       dados.lojas = lojas
       dados.saques = saques
-      // As recargas vêm à parte: se a função ainda não existir no banco, o resto da administração continua de pé.
+      // As recargas e os pedidos de loja vêm à parte: se a função ainda não existir no banco, o resto continua de pé.
       dados.recargas = await repo.lerRecargas().catch(() => undefined)
+      dados.pedidosDeLoja = await repo.lerPedidosDeLoja().catch(() => undefined)
       dados.naoEAdmin = false
     } catch (e) {
       if (repo.eSoAdmin(e)) {
@@ -467,6 +482,55 @@ export function montarAdmin(onde: HTMLElement, repo: Repositorio): Montada {
           await recarregarDados()
         }
       }),
+    procurarParaPedido: async (pedidoId, nome) => {
+      dados.analise = { pedidoId, passo: 'buscar', achados: null }
+      pintar()
+      try {
+        // Pelas palavras do nome: "Ótica Nova Visão" acha "Ótica Visão" pela primeira palavra que bater.
+        const achados = await repo.buscarLojistas(nome)
+        if (dados.analise?.pedidoId === pedidoId) dados.analise.achados = achados
+      } catch (e) {
+        dados.erro = repo.fraseDoErro(e)
+        dados.analise = null
+      }
+      pintar()
+    },
+    escolherVinculo: (pedidoId, origem, origemId, rotulo) => {
+      dados.analise = { pedidoId, passo: 'confirmar', escolha: { origem, origemId, rotulo } }
+      pintar()
+    },
+    aprovarPedido: () =>
+      tentar(async () => {
+        const a = dados.analise
+        if (!a?.escolha) return
+        try {
+          await repo.aprovarLoja(a.pedidoId, a.escolha.origem, a.escolha.origemId)
+          dados.recado = 'Loja aprovada: já está no Troco Prime e é parceira do Clube Prime. Ela entra pelo balcão e põe crédito por Pix.'
+        } finally {
+          dados.analise = null
+          await recarregarDados()
+        }
+      }),
+    prepararRecusa: (pedidoId) => {
+      dados.analise = { pedidoId, passo: 'recusar' }
+      pintar()
+    },
+    recusarPedido: (motivo) =>
+      tentar(async () => {
+        const a = dados.analise
+        if (!a) return
+        try {
+          await repo.recusarLoja(a.pedidoId, motivo)
+          dados.recado = 'Pedido recusado. A loja vê o motivo no balcão.'
+        } finally {
+          dados.analise = null
+          await recarregarDados()
+        }
+      }),
+    cancelarPedido: () => {
+      dados.analise = null
+      pintar()
+    },
     prepararRecarga: (id) => {
       dados.recargaAConfirmar = id
       pintar()
